@@ -5,11 +5,11 @@
 //  Created by Michael Vu on 12/6/24.
 //
 
-
 import UIKit
 
 class PostDetailViewController: UIViewController {
 
+    // MARK: - Properties
     private var post: Post
     private var comments: [Comment] = []
 
@@ -20,26 +20,34 @@ class PostDetailViewController: UIViewController {
     private let textField = UITextField()
     private let postButton = UIButton(type: .system)
 
+    // MARK: - Init
     init(post: Post) {
         self.post = post
         super.init(nibName: nil, bundle: nil)
-        self.comments = MockData.comments.filter { $0.post_id == post.id }
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
         title = "Post Details"
+        
         setupScrollView()
         setupContent()
         displayPostContent()
-        displayComments()
+        fetchComments()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        fetchComments()  // Ensure comments are updated when returning to this view
+    }
+
+    // MARK: - Setup UI
     private func setupScrollView() {
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
@@ -77,14 +85,12 @@ class PostDetailViewController: UIViewController {
 
         textField.placeholder = "Write a comment..."
         textField.borderStyle = .roundedRect
-        textField.translatesAutoresizingMaskIntoConstraints = false
 
         postButton.setTitle("Post", for: .normal)
         postButton.backgroundColor = .systemBlue
         postButton.setTitleColor(.white, for: .normal)
         postButton.layer.cornerRadius = 8
         postButton.addTarget(self, action: #selector(addComment), for: .touchUpInside)
-        postButton.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(contentStackView)
         contentView.addSubview(commentStackView)
@@ -93,6 +99,8 @@ class PostDetailViewController: UIViewController {
 
         contentStackView.translatesAutoresizingMaskIntoConstraints = false
         commentStackView.translatesAutoresizingMaskIntoConstraints = false
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        postButton.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             contentStackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
@@ -117,16 +125,17 @@ class PostDetailViewController: UIViewController {
         ])
     }
 
+    // MARK: - Display Post Content
     private func displayPostContent() {
         contentStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         let titleLabel = UILabel()
-        titleLabel.text = post.post_name
+        titleLabel.text = post.postName
         titleLabel.font = .boldSystemFont(ofSize: 20)
         titleLabel.textAlignment = .center
 
         let descriptionLabel = UILabel()
-        descriptionLabel.text = post.description
+        descriptionLabel.text = post.postDescription
         descriptionLabel.font = .systemFont(ofSize: 16)
         descriptionLabel.numberOfLines = 0
         descriptionLabel.textAlignment = .justified
@@ -142,6 +151,7 @@ class PostDetailViewController: UIViewController {
         contentStackView.addArrangedSubview(timestampLabel)
     }
 
+    // MARK: - Display Comments
     private func displayComments() {
         commentStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
@@ -188,21 +198,59 @@ class PostDetailViewController: UIViewController {
         return containerView
     }
 
+    // MARK: - API Calls
+    private func fetchComments() {
+        APIService.shared.fetch("/posts/\(post.id)/comments/", responseType: [Comment].self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let fetchedComments):
+                    self.comments = fetchedComments
+                    self.displayComments()
+                case .failure(let error):
+                    print("Error fetching comments:", error.localizedDescription)
+                    self.showAlert(title: "Error", message: "Failed to fetch comments.")
+                }
+            }
+        }
+    }
+
     @objc private func addComment() {
-        guard let text = textField.text, !text.isEmpty else { return }
+        guard let text = textField.text, !text.isEmpty else {
+            showAlert(title: "Error", message: "Comment cannot be empty.")
+            return
+        }
 
         let newComment = Comment(
-            id: MockData.comments.count + 1,
+            id: 0,
             description: text,
             timestamp: DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short),
-            post_id: post.id
+            postID: post.id
         )
-        MockData.comments.append(newComment)
-        comments.append(newComment)
-        textField.text = ""
-        displayComments()
+
+        APIService.shared.create("/posts/\(post.id)/comments/", payload: newComment, responseType: Comment.self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let createdComment):
+                    self.comments.append(createdComment)
+                    self.textField.text = ""
+                    self.displayComments()
+                case .failure(let error):
+                    print("Error posting comment:", error.localizedDescription)
+                    self.showAlert(title: "Error", message: "Failed to post comment.")
+                }
+            }
+        }
+    }
+
+    // MARK: - Utility
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
 }
+
+
 
 
 

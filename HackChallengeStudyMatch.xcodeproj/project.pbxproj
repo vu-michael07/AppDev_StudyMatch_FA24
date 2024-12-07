@@ -18,7 +18,6 @@
 		AD29C3F92D016EE900E84444 /* UserDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C3F82D016EE900E84444 /* UserDetailViewController.swift */; };
 		AD29C3FF2D016F1E00E84444 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C3FE2D016F1B00E84444 /* Extensions.swift */; };
 		AD29C4052D016F8B00E84444 /* UserCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4042D016F8B00E84444 /* UserCell.swift */; };
-		AD29C4072D016F9500E84444 /* MockData.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4062D016F9500E84444 /* MockData.swift */; };
 		AD29C4092D016FD000E84444 /* Group.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4082D016FD000E84444 /* Group.swift */; };
 		AD29C40B2D01710B00E84444 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C40A2D01710B00E84444 /* SceneDelegate.swift */; };
 		AD29C40F2D0179E300E84444 /* GroupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C40E2D0179E200E84444 /* GroupView.swift */; };
@@ -30,6 +29,8 @@
 		AD29C4312D03A93E00E84444 /* PostDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4302D03A93E00E84444 /* PostDetailViewController.swift */; };
 		AD29C4352D03C2AD00E84444 /* GroupsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4342D03C2AD00E84444 /* GroupsViewController.swift */; };
 		AD29C4372D03C2B600E84444 /* PeopleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4362D03C2B600E84444 /* PeopleViewController.swift */; };
+		ADE5DBD52D043DEE007738FB /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE5DBD42D043DEE007738FB /* APIError.swift */; };
+		ADE5DBD72D0447B0007738FB /* UserSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE5DBD62D0447B0007738FB /* UserSessionManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,7 +43,6 @@
 		AD29C3F82D016EE900E84444 /* UserDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDetailViewController.swift; sourceTree = "<group>"; };
 		AD29C3FE2D016F1B00E84444 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		AD29C4042D016F8B00E84444 /* UserCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserCell.swift; sourceTree = "<group>"; };
-		AD29C4062D016F9500E84444 /* MockData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockData.swift; sourceTree = "<group>"; };
 		AD29C4082D016FD000E84444 /* Group.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Group.swift; sourceTree = "<group>"; };
 		AD29C40A2D01710B00E84444 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		AD29C40E2D0179E200E84444 /* GroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupView.swift; sourceTree = "<group>"; };
@@ -54,6 +54,8 @@
 		AD29C4302D03A93E00E84444 /* PostDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostDetailViewController.swift; sourceTree = "<group>"; };
 		AD29C4342D03C2AD00E84444 /* GroupsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewController.swift; sourceTree = "<group>"; };
 		AD29C4362D03C2B600E84444 /* PeopleViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleViewController.swift; sourceTree = "<group>"; };
+		ADE5DBD42D043DEE007738FB /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		ADE5DBD62D0447B0007738FB /* UserSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSessionManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,10 +95,12 @@
 				2ED700572AF1CF5600B7C687 /* AppDelegate.swift */,
 				AD29C3FE2D016F1B00E84444 /* Extensions.swift */,
 				AD29C40A2D01710B00E84444 /* SceneDelegate.swift */,
+				ADE5DBD62D0447B0007738FB /* UserSessionManager.swift */,
 				AD29C3F62D016EDE00E84444 /* HomeViewController.swift */,
 				AD29C3F82D016EE900E84444 /* UserDetailViewController.swift */,
 				AD29C4142D017C6F00E84444 /* GroupDetailViewController.swift */,
 				AD29C4042D016F8B00E84444 /* UserCell.swift */,
+				ADE5DBD42D043DEE007738FB /* APIError.swift */,
 				AD29C4282D019A2A00E84444 /* SettingsView.swift */,
 				AD29C40E2D0179E200E84444 /* GroupView.swift */,
 				AD29C4102D0179E800E84444 /* PersonView.swift */,
@@ -106,7 +110,6 @@
 				AD29C4202D01810D00E84444 /* CommentSectionView.swift */,
 				AD29C4302D03A93E00E84444 /* PostDetailViewController.swift */,
 				AD29C4082D016FD000E84444 /* Group.swift */,
-				AD29C4062D016F9500E84444 /* MockData.swift */,
 				2ED700602AF1CF5700B7C687 /* Assets.xcassets */,
 				2ED700622AF1CF5700B7C687 /* LaunchScreen.storyboard */,
 				2ED700652AF1CF5700B7C687 /* Info.plist */,
@@ -202,7 +205,7 @@
 				AD29C4372D03C2B600E84444 /* PeopleViewController.swift in Sources */,
 				AD29C4092D016FD000E84444 /* Group.swift in Sources */,
 				AD29C4292D019A2A00E84444 /* SettingsView.swift in Sources */,
-				AD29C4072D016F9500E84444 /* MockData.swift in Sources */,
+				ADE5DBD72D0447B0007738FB /* UserSessionManager.swift in Sources */,
 				AD29C4312D03A93E00E84444 /* PostDetailViewController.swift in Sources */,
 				AD29C3F92D016EE900E84444 /* UserDetailViewController.swift in Sources */,
 				AD29C4212D01810E00E84444 /* CommentSectionView.swift in Sources */,
@@ -212,6 +215,7 @@
 				AD29C4112D0179E800E84444 /* PersonView.swift in Sources */,
 				AD29C3F72D016EDE00E84444 /* HomeViewController.swift in Sources */,
 				AD29C3FF2D016F1E00E84444 /* Extensions.swift in Sources */,
+				ADE5DBD52D043DEE007738FB /* APIError.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

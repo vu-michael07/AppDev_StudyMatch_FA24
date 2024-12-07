@@ -9,21 +9,17 @@ import UIKit
 
 class GroupDetailViewController: UIViewController {
     
-    // MARK: - Properties (views)
-    
+    // MARK: - Properties (Views)
     private let scrollView = UIScrollView()
     private let contentView = UIView()
     private let peopleStackView = UIStackView()
     private let tasksStackView = UIStackView()
     private let joinGroupButton = UIButton(type: .system)
-
     
-    // MARK: - Properties (data)
-    
+    // MARK: - Properties (Data)
     private var group: Group
     
     // MARK: - Init
-    
     init(group: Group) {
         self.group = group
         super.init(nibName: nil, bundle: nil)
@@ -34,29 +30,21 @@ class GroupDetailViewController: UIViewController {
     }
     
     // MARK: - Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
         title = group.name
+        
         setupScrollView()
         setupPeopleSection()
         setupTasksSection()
         setupJoinGroupButton()
+        refreshGroupData()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        // Refresh group data from MockData
-        if let updatedGroup = MockData.groups.first(where: { $0.id == group.id }) {
-            group = updatedGroup
-        }
-        
-        // Refresh UI
-        refreshTasks()
-        setupPeopleSection()
-        updateJoinGroupButtonState() // Update the join/leave button state
+        refreshGroupData()  // Fetch the latest group data
     }
     
     // MARK: - Setup Views
@@ -81,10 +69,10 @@ class GroupDetailViewController: UIViewController {
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
         
-
         contentView.addSubview(joinGroupButton)
         contentView.addSubview(peopleStackView)
         contentView.addSubview(tasksStackView)
+        
         joinGroupButton.translatesAutoresizingMaskIntoConstraints = false
         peopleStackView.translatesAutoresizingMaskIntoConstraints = false
         tasksStackView.translatesAutoresizingMaskIntoConstraints = false
@@ -106,22 +94,19 @@ class GroupDetailViewController: UIViewController {
         ])
     }
     
-
-    
     private func setupPeopleSection() {
         peopleStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         peopleStackView.axis = .vertical
         peopleStackView.spacing = 16
-
+        
         let peopleLabel = UILabel()
         peopleLabel.text = "People"
         peopleLabel.font = .boldSystemFont(ofSize: 20)
         peopleLabel.textAlignment = .center
-        
         peopleStackView.addArrangedSubview(peopleLabel)
         
         for user in group.users {
-            let personView = PersonView(user: user, groups: MockData.groups)
+            let personView = PersonView(user: user, groups: [group])
             peopleStackView.addArrangedSubview(personView)
         }
     }
@@ -131,38 +116,25 @@ class GroupDetailViewController: UIViewController {
         tasksStackView.axis = .vertical
         tasksStackView.spacing = 16
         
-        // Add the Tasks label
+        // Tasks label
         let tasksLabel = UILabel()
         tasksLabel.text = "Tasks"
         tasksLabel.font = .boldSystemFont(ofSize: 20)
         tasksLabel.textAlignment = .center
         tasksStackView.addArrangedSubview(tasksLabel)
         
-        // Add the "Add Task" section
-        let addTaskStackView = UIStackView()
-        addTaskStackView.axis = .vertical
-        addTaskStackView.spacing = 8
-        
-        let taskNameField = UITextField()
-        taskNameField.placeholder = "Task Name"
-        taskNameField.borderStyle = .roundedRect
-        
-        let taskDescriptionField = UITextField()
-        taskDescriptionField.placeholder = "Task Description"
-        taskDescriptionField.borderStyle = .roundedRect
-        
-        let taskDueDateField = UITextField()
-        taskDueDateField.placeholder = "Due Date (YYYY-MM-DD)"
-        taskDueDateField.borderStyle = .roundedRect
+        // Add Task Form
+        let taskNameField = createTextField(placeholder: "Task Name")
+        let taskDescriptionField = createTextField(placeholder: "Task Description")
+        let taskDueDateField = createTextField(placeholder: "Due Date (YYYY-MM-DD)")
         
         let addTaskButton = UIButton(type: .system)
         styleButton(addTaskButton, title: "Add Task")
-        addTaskButton.addTarget(self, action: #selector(addTask(_:)), for: .touchUpInside)
+        addTaskButton.addTarget(self, action: #selector(addTask), for: .touchUpInside)
         
-        addTaskStackView.addArrangedSubview(taskNameField)
-        addTaskStackView.addArrangedSubview(taskDescriptionField)
-        addTaskStackView.addArrangedSubview(taskDueDateField)
-        addTaskStackView.addArrangedSubview(addTaskButton)
+        let addTaskStackView = UIStackView(arrangedSubviews: [taskNameField, taskDescriptionField, taskDueDateField, addTaskButton])
+        addTaskStackView.axis = .vertical
+        addTaskStackView.spacing = 8
         
         tasksStackView.addArrangedSubview(addTaskStackView)
         
@@ -175,19 +147,56 @@ class GroupDetailViewController: UIViewController {
         for task in group.tasks {
             let taskView = TaskView(
                 task: task,
-                onDelete: { [weak self] taskToDelete in
-                    self?.deleteTask(taskToDelete)
+                onTaskDeleted: { [weak self] taskToDelete in
+                    guard let self = self else { return }
+                    self.refreshGroupData()  // Reload the entire group data after deletion
                 },
-                onEdit: { [weak self] taskToEdit in
-                    self?.editTask(taskToEdit)
+                onTaskEdited: { [weak self] taskToEdit in
+                    guard let self = self else { return }
+                    self.refreshGroupData()  // Reload the group data after editing
                 }
             )
             tasksStackView.addArrangedSubview(taskView)
         }
     }
 
-
-
+    
+    // MARK: - API Integration
+    
+    private func refreshGroupData() {
+        APIService.shared.fetch("/groups/\(group.id)/", responseType: Group.self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedGroup):
+                    self.group = updatedGroup
+                    self.setupPeopleSection()
+                    self.refreshTasks()
+                    self.updateJoinGroupButtonState()
+                case .failure(let error):
+                    print("Error refreshing group data:", error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helpers
+    
+    private func createTextField(placeholder: String) -> UITextField {
+        let textField = UITextField()
+        textField.placeholder = placeholder
+        textField.borderStyle = .roundedRect
+        return textField
+    }
+    
+    private func styleButton(_ button: UIButton, title: String) {
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .systemBlue
+        button.layer.cornerRadius = 8
+    }
+    
+    // MARK: - Actions
+    
     @objc private func addTask(_ sender: UIButton) {
         guard let stackView = sender.superview as? UIStackView,
               let nameField = stackView.arrangedSubviews[0] as? UITextField,
@@ -196,149 +205,124 @@ class GroupDetailViewController: UIViewController {
               let taskName = nameField.text, !taskName.isEmpty,
               let taskDescription = descriptionField.text, !taskDescription.isEmpty,
               let dueDate = dueDateField.text, !dueDate.isEmpty else {
+            showAlert(title: "Error", message: "All fields are required.")
             return
         }
         
-        let newTask = Task(
-            id: MockData.tasks.count + 1,
-            task_name: taskName,
-            description: taskDescription,
-            due_date: dueDate,
-            group_id: group.id
-        )
+        // Corrected Payload Keys to Match Backend
+        let taskPayload: [String: Any] = [
+            "task_name": taskName,
+            "description": taskDescription,  // Corrected to "description"
+            "due_date": dueDate
+        ]
         
-        // Update MockData
-        if let groupIndex = MockData.groups.firstIndex(where: { $0.id == group.id }) {
-            MockData.groups[groupIndex].tasks.append(newTask)
-            group = MockData.groups[groupIndex] // Refresh local group
-        }
-        MockData.tasks.append(newTask)
-        refreshTasks()
+        // Print Payload for Debugging
+        print("Request Payload:", taskPayload)
         
-        nameField.text = ""
-        descriptionField.text = ""
-        dueDateField.text = ""
-    }
-
-    private func deleteTask(_ task: Task) {
-        if let groupIndex = MockData.groups.firstIndex(where: { $0.id == group.id }),
-           let taskIndex = MockData.groups[groupIndex].tasks.firstIndex(where: { $0.id == task.id }) {
-            MockData.groups[groupIndex].tasks.remove(at: taskIndex)
-            group = MockData.groups[groupIndex] // Refresh local group
-        }
-        if let mockIndex = MockData.tasks.firstIndex(where: { $0.id == task.id }) {
-            MockData.tasks.remove(at: mockIndex)
-        }
-        refreshTasks()
-    }
-
-    private func editTask(_ task: Task) {
-        // Alerts
-        let alertController = UIAlertController(title: "Edit Task", message: nil, preferredStyle: .alert)
-        
-        alertController.addTextField { textField in
-            textField.text = task.task_name
-            textField.placeholder = "Task Name"
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: taskPayload, options: []) else {
+            showAlert(title: "Error", message: "Failed to encode task payload.")
+            return
         }
         
-        alertController.addTextField { textField in
-            textField.text = task.description
-            textField.placeholder = "Task Description"
-        }
-        
-        alertController.addTextField { textField in
-            textField.text = task.due_date
-            textField.placeholder = "Due Date (YYYY-MM-DD)"
-        }
-        
-        let saveAction = UIAlertAction(title: "Save", style: .default) { [weak self] _ in
-            guard let nameField = alertController.textFields?[0].text, !nameField.isEmpty,
-                  let descriptionField = alertController.textFields?[1].text, !descriptionField.isEmpty,
-                  let dueDateField = alertController.textFields?[2].text, !dueDateField.isEmpty else { return }
-            
-            // Update the task
-            if let groupIndex = MockData.groups.firstIndex(where: { $0.id == self?.group.id }),
-               let taskIndex = MockData.groups[groupIndex].tasks.firstIndex(where: { $0.id == task.id }) {
-                MockData.groups[groupIndex].tasks[taskIndex].task_name = nameField
-                MockData.groups[groupIndex].tasks[taskIndex].description = descriptionField
-                MockData.groups[groupIndex].tasks[taskIndex].due_date = dueDateField
-                
-                // Refresh the local group and UI
-                self?.group = MockData.groups[groupIndex]
-                self?.refreshTasks()
+        APIService.shared.sendRequest(
+            endpoint: "/groups/\(group.id)/tasks/",
+            method: "POST",
+            body: jsonData,
+            responseType: Group.self
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedGroup):
+                    self.group = updatedGroup
+                    self.refreshTasks()
+                    nameField.text = ""
+                    descriptionField.text = ""
+                    dueDateField.text = ""
+                case .failure(let error):
+                    print("Error creating task:", error.errorDescription ?? "Unknown error")
+                    self.showAlert(
+                        title: "Error",
+                        message: "Failed to create task. Reason: \(error.errorDescription ?? "Unknown")"
+                    )
+                }
             }
         }
-        
-        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
-        alertController.addAction(saveAction)
-        alertController.addAction(cancelAction)
-        
-        present(alertController, animated: true, completion: nil)
-    }
-    
-    private func styleButton(_ button: UIButton, title: String) {
-        button.setTitle(title, for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .systemBlue
-        button.layer.cornerRadius = 8
-        button.heightAnchor.constraint(equalToConstant: 40).isActive = true
     }
 
-    private func setupJoinGroupButton() {
-        joinGroupButton.layer.cornerRadius = 8
-        joinGroupButton.addTarget(self, action: #selector(joinGroup), for: .touchUpInside)
-        updateJoinGroupButtonState() // Set initial button state
-    }
     
-    private func updateJoinGroupButtonState() {
-        if group.users.contains(where: { $0.id == MockData.currentUser.id }) {
-            joinGroupButton.setTitle("Leave Group", for: .normal)
-            joinGroupButton.setTitleColor(.white, for: .normal)
-            joinGroupButton.backgroundColor = .systemRed
-        } else if MockData.currentUser.group_id != nil && MockData.currentUser.group_id != group.id {
-            joinGroupButton.setTitle("In Different Group", for: .normal)
-            joinGroupButton.setTitleColor(.white, for: .normal)
-            joinGroupButton.backgroundColor = .black
-        } else {
-            joinGroupButton.setTitle("Join Group", for: .normal)
-            joinGroupButton.setTitleColor(.white, for: .normal)
-            joinGroupButton.backgroundColor = .systemBlue
-        }
-    }
-    
-    // MARK: - Actions
-    
+    // MARK: - Join Group Logic
+     private func setupJoinGroupButton() {
+         joinGroupButton.layer.cornerRadius = 8
+         joinGroupButton.addTarget(self, action: #selector(joinGroup), for: .touchUpInside)
+         updateJoinGroupButtonState()
+     }
+     
+     private func updateJoinGroupButtonState() {
+         guard let currentUser = UserSessionManager.shared.currentUser else { return }
+         
+         if let userGroupId = currentUser.group_id {
+             configureJoinButton(title: "In Different Group", color: .black)
+         } else {
+             configureJoinButton(title: "Join Group", color: .systemBlue)
+         }
+     }
+
+     private func configureJoinButton(title: String, color: UIColor) {
+         joinGroupButton.setTitle(title, for: .normal)
+         joinGroupButton.setTitleColor(.white, for: .normal)
+         joinGroupButton.backgroundColor = color
+     }
+     
     @objc private func joinGroup() {
-        if MockData.currentUser.group_id != nil && MockData.currentUser.group_id != group.id {
-            // User is already in a different group
-            joinGroupButton.setTitle("Failed", for: .normal)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                self.updateJoinGroupButtonState()
-            }
+        guard let currentUser = UserSessionManager.shared.currentUser else {
+            showAlert(title: "Error", message: "No current user found.")
             return
         }
         
-        guard let currentUserIndex = MockData.users.firstIndex(where: { $0.id == MockData.currentUser.id }) else { return }
+        let endpoint = "/users/\(currentUser.id)/"
+        let payload: [String: Any] = ["group_id": group.id]
 
-        if group.users.contains(where: { $0.id == MockData.currentUser.id }) {
-            // Leave Group
-            MockData.users[currentUserIndex].group_id = nil
-            group.users.removeAll { $0.id == MockData.currentUser.id }
-        } else {
-            // Join Group
-            MockData.users[currentUserIndex].group_id = group.id
-            group.users.append(MockData.users[currentUserIndex])
+        // Print Debug Information
+        print("Request Endpoint:", endpoint)
+        print("Request Payload:", payload)
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: payload) else {
+            showAlert(title: "Error", message: "Failed to encode request payload.")
+            return
         }
 
-        if let groupIndex = MockData.groups.firstIndex(where: { $0.id == group.id }) {
-            MockData.groups[groupIndex].users = group.users
+        APIService.shared.sendRequest(
+            endpoint: endpoint,
+            method: "PUT",
+            body: jsonData,
+            responseType: Group.self
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let updatedGroup):
+                    print("Successfully joined group:", updatedGroup)
+                    self.group = updatedGroup
+                    self.refreshGroupData()
+                    self.updateJoinGroupButtonState()
+
+                case .failure(let error):
+                    print("Error updating group membership:", error.errorDescription ?? "Unknown error")
+                    self.showAlert(
+                        title: "Error",
+                        message: "Failed to update group. Reason: \(error.errorDescription ?? "Unknown")"
+                    )
+                }
+            }
         }
-
-        MockData.currentUser = MockData.users[currentUserIndex] // Does something
-
-        setupPeopleSection()
-        updateJoinGroupButtonState()
     }
-}
 
 
+
+     
+     // MARK: - Utility
+     private func showAlert(title: String, message: String) {
+         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+         alert.addAction(UIAlertAction(title: "OK", style: .default))
+         present(alert, animated: true)
+     }
+ }

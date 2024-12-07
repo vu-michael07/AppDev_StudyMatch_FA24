@@ -9,15 +9,10 @@ import UIKit
 
 class GroupsViewController: UIViewController {
     
-    // MARK: - Properties (data)
-
-    private var groups: [Group] {
-        MockData.groups
-    }
+    // MARK: - Properties (Data)
+    private var groups: [Group] = []
     
     // MARK: - Init
-    
-    // Initializes
     init() {
         super.init(nibName: nil, bundle: nil)
     }
@@ -27,30 +22,26 @@ class GroupsViewController: UIViewController {
     }
     
     // MARK: - Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
         title = "Groups"
         
         setupCreateGroupSection()
-        setupScrollView()
+        fetchGroups()  // Fetch initial groups from backend
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        setupScrollView() // Refresh
+        fetchGroups()  // Refresh groups when the view appears
     }
     
     // MARK: - Setup Views
-    
-    // Scroll
     private func setupScrollView() {
-        // Remove scroll or something
         view.subviews.filter { $0.tag == 1001 }.forEach { $0.removeFromSuperview() }
         
         let scrollView = UIScrollView()
-        scrollView.tag = 1001 // ATag
+        scrollView.tag = 1001
         view.addSubview(scrollView)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         
@@ -84,11 +75,11 @@ class GroupsViewController: UIViewController {
             stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
         
-        // Group View
+        // Populate Group Views
         for group in groups {
             let groupView = GroupView(group: group)
             groupView.isUserInteractionEnabled = true
-            groupView.tag = group.id // Tag
+            groupView.tag = group.id
             
             let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleGroupTap(_:)))
             groupView.addGestureRecognizer(tapGesture)
@@ -97,7 +88,6 @@ class GroupsViewController: UIViewController {
         }
     }
     
-    // New group
     private func setupCreateGroupSection() {
         let createGroupStackView = UIStackView()
         createGroupStackView.axis = .horizontal
@@ -105,13 +95,13 @@ class GroupsViewController: UIViewController {
         createGroupStackView.alignment = .center
         createGroupStackView.distribution = .fillProportionally
         
-        // Input for group name
+        // TextField for Group Name
         let textField = UITextField()
         textField.placeholder = "Enter Group Name"
         textField.borderStyle = .roundedRect
         textField.translatesAutoresizingMaskIntoConstraints = false
         
-        // Button for creating a new group
+        // Create Group Button
         let createGroupButton = UIButton(type: .system)
         createGroupButton.setTitle("Create Group", for: .normal)
         createGroupButton.backgroundColor = .systemBlue
@@ -136,38 +126,29 @@ class GroupsViewController: UIViewController {
     }
     
     // MARK: - Actions
-    
-    // New group
     @objc private func createGroup(_ sender: UIButton) {
         guard let stackView = sender.superview as? UIStackView,
               let textField = stackView.arrangedSubviews.first(where: { $0 is UITextField }) as? UITextField,
               let groupName = textField.text, !groupName.isEmpty else {
-            return // Do nothing if name bad
+            return
         }
         
-        // Create a new group
-        var newGroup = Group(
-            id: MockData.groups.count + 1,
-            name: groupName,
-            users: [],
-            tasks: []
-        )
-        MockData.groups.append(newGroup)
-        
-        // Assign to the new group if not in group
-        if MockData.currentUser.group_id == nil {
-            MockData.currentUser.group_id = newGroup.id
-            newGroup.users.append(MockData.currentUser)
+        // Create Group API Call
+        let newGroup = Group(id: 0, name: groupName, users: [], tasks: [])
+        APIService.shared.create("/groups/", payload: newGroup as Encodable, responseType: Group.self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let createdGroup):
+                    self.groups.append(createdGroup)
+                    textField.text = ""  // Clear input
+                    self.setupScrollView()  // Refresh UI
+                case .failure(let error):
+                    print("Error creating group:", error.localizedDescription)
+                }
+            }
         }
-        
-        // Clear
-        textField.text = ""
-        setupScrollView()
-        
-
     }
     
-    // Handles tapping
     @objc private func handleGroupTap(_ sender: UITapGestureRecognizer) {
         guard let groupView = sender.view as? GroupView,
               let selectedGroup = groups.first(where: { $0.id == groupView.tag }) else {
@@ -177,4 +158,22 @@ class GroupsViewController: UIViewController {
         let groupDetailVC = GroupDetailViewController(group: selectedGroup)
         navigationController?.pushViewController(groupDetailVC, animated: true)
     }
+    
+    // MARK: - API Integration
+    private func fetchGroups() {
+        APIService.shared.fetch("/groups/", responseType: GroupResponse.self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self.groups = response.groups
+                    self.setupScrollView()  // Refresh UI
+                case .failure(let error):
+                    print("Error fetching groups:", error.localizedDescription)
+                }
+            }
+        }
+    }
+
+
+    
 }

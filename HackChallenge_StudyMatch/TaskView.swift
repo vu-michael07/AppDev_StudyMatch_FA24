@@ -9,18 +9,19 @@ import UIKit
 
 class TaskView: UIView {
     
+    // MARK: - Properties
     private let deleteButton = UIButton(type: .system)
     private let editButton = UIButton(type: .system)
     private let task: Task
-    private let onDelete: (Task) -> Void
-    private let onEdit: (Task) -> Void
+    private let onTaskDeleted: (Task) -> Void
+    private let onTaskEdited: (Task) -> Void
     
     // MARK: - Init
     
-    init(task: Task, onDelete: @escaping (Task) -> Void, onEdit: @escaping (Task) -> Void) {
+    init(task: Task, onTaskDeleted: @escaping (Task) -> Void, onTaskEdited: @escaping (Task) -> Void) {
         self.task = task
-        self.onDelete = onDelete
-        self.onEdit = onEdit
+        self.onTaskDeleted = onTaskDeleted
+        self.onTaskEdited = onTaskEdited
         super.init(frame: .zero)
         setupView(task: task)
     }
@@ -29,7 +30,7 @@ class TaskView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
-    // MARK: - Setup
+    // MARK: - Setup View
     
     private func setupView(task: Task) {
         layer.cornerRadius = 12
@@ -37,39 +38,46 @@ class TaskView: UIView {
         layer.borderColor = UIColor.gray.cgColor
         backgroundColor = .systemGray6
         
+        // Task Name
         let nameLabel = UILabel()
         nameLabel.text = task.task_name
         nameLabel.font = .boldSystemFont(ofSize: 18)
         nameLabel.textAlignment = .center
         
+        // Task Description
         let descriptionLabel = UILabel()
-        descriptionLabel.text = task.description
+        descriptionLabel.text = task.task_description
         descriptionLabel.font = .systemFont(ofSize: 14)
         descriptionLabel.textAlignment = .left
         descriptionLabel.numberOfLines = 0
         
+        // Task Due Date
         let dueDateLabel = UILabel()
         dueDateLabel.text = "Due Date: \(task.due_date)"
         dueDateLabel.font = .systemFont(ofSize: 14)
         dueDateLabel.textAlignment = .left
         
-        deleteButton.setTitle("Delete Task", for: .normal)
+        // Delete Task Button
+        deleteButton.setTitle("Delete", for: .normal)
         deleteButton.setTitleColor(.white, for: .normal)
-        deleteButton.backgroundColor = .red
+        deleteButton.backgroundColor = .systemRed
         deleteButton.layer.cornerRadius = 5
         deleteButton.addTarget(self, action: #selector(deleteTask), for: .touchUpInside)
         
-        editButton.setTitle("Edit Task", for: .normal)
+        // Edit Task Button
+        editButton.setTitle("Edit", for: .normal)
         editButton.setTitleColor(.white, for: .normal)
         editButton.backgroundColor = .systemBlue
         editButton.layer.cornerRadius = 5
         editButton.addTarget(self, action: #selector(editTask), for: .touchUpInside)
         
+        // Button Stack
         let buttonStackView = UIStackView(arrangedSubviews: [editButton, deleteButton])
         buttonStackView.axis = .horizontal
         buttonStackView.spacing = 16
         buttonStackView.distribution = .fillEqually
         
+        // Main Stack
         let stackView = UIStackView(arrangedSubviews: [nameLabel, descriptionLabel, dueDateLabel, buttonStackView])
         stackView.axis = .vertical
         stackView.spacing = 8
@@ -85,15 +93,105 @@ class TaskView: UIView {
         ])
     }
     
-    // MARK: - Actions
+    // MARK: - API Actions
     
     @objc private func deleteTask() {
-        onDelete(task)
+        let endpoint = "/tasks/\(task.id)/"
+        
+        APIService.shared.sendRequest(
+            endpoint: endpoint,
+            method: "DELETE",
+            body: nil,
+            responseType: Task.self
+        ) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success:
+                    print("Task deleted successfully.")
+                    self.onTaskDeleted(self.task)
+                case .failure(let error):
+                    print("Error deleting task:", error.errorDescription ?? "Unknown error")
+                    self.showAlert(title: "Error", message: "Failed to delete task.")
+                }
+            }
+        }
     }
     
     @objc private func editTask() {
-        onEdit(task)
+        let alertController = UIAlertController(title: "Edit Task", message: nil, preferredStyle: .alert)
+        
+        // Task Fields
+        alertController.addTextField { [self] textField in
+            textField.text = task.task_name
+            textField.placeholder = "Task Name"
+        }
+        
+        alertController.addTextField { [self] textField in
+            textField.text = task.task_description
+            textField.placeholder = "Task Description"
+        }
+        
+        alertController.addTextField { [self] textField in
+            textField.text = task.due_date
+            textField.placeholder = "Due Date (YYYY-MM-DD)"
+        }
+        
+        // Save Action
+        let saveAction = UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+            guard let self = self,
+                  let taskName = alertController.textFields?[0].text, !taskName.isEmpty,
+                  let taskDescription = alertController.textFields?[1].text, !taskDescription.isEmpty,
+                  let dueDate = alertController.textFields?[2].text, !dueDate.isEmpty else {
+                self?.showAlert(title: "Error", message: "All fields are required.")
+                return
+            }
+            
+            // Corrected Payload Keys Based on Backend Expectations
+            let updatedTaskPayload: [String: Any] = [
+                "task_name": taskName,
+                "description": taskDescription,  // Corrected Key
+                "due_date": dueDate
+            ]
+            
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: updatedTaskPayload) else {
+                self.showAlert(title: "Error", message: "Failed to encode task data.")
+                return
+            }
+            
+            // Perform the PUT Request
+            APIService.shared.sendRequest(
+                endpoint: "/tasks/\(self.task.id)/",
+                method: "PUT",
+                body: jsonData,
+                responseType: Group.self  // Assuming the backend returns a full Group response
+            ) { result in
+                DispatchQueue.main.async {
+                    switch result {
+                    case .success(let updatedGroup):
+                        print("Task updated successfully.")
+                        self.onTaskEdited(self.task)
+                    case .failure(let error):
+                        print("Error updating task:", error.errorDescription ?? "Unknown error")
+                        self.showAlert(title: "Error", message: "Failed to update task.")
+                    }
+                }
+            }
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        alertController.addAction(saveAction)
+        alertController.addAction(cancelAction)
+        
+        // Present Alert Safely
+        UIApplication.shared.windows.first?.rootViewController?.present(alertController, animated: true)
+    }
+
+    
+    // MARK: - Utility
+    
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        UIApplication.shared.windows.first?.rootViewController?.present(alert, animated: true)
     }
 }
-
-

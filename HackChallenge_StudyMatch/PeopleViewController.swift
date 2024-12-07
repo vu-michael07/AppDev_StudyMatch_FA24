@@ -4,23 +4,17 @@
 //
 //  Created by Michael Vu on 12/6/24.
 //
-
 import UIKit
 
 class PeopleViewController: UIViewController {
     
-    // MARK: - Properties (data)
-    private var groups: [Group] { // All available groups
-        MockData.groups
-    }
-    private var users: [User] {
-        MockData.users // Always fetch the latest users 
-    }
+    // MARK: - Properties (Data)
+    private var groups: [Group] = []  // Groups from backend
+    private var users: [User] = []    // Users from backend
     
     // MARK: - Init
-    
-    // Initializes
     init(groups: [Group]) {
+        self.groups = groups
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -29,21 +23,22 @@ class PeopleViewController: UIViewController {
     }
     
     // MARK: - Lifecycle
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
         title = "People"
+        
+        fetchGroups()   // Fetch groups from backend
+        fetchUsers()    // Fetch users from backend
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        setupScrollView() // Refresh
+        fetchGroups()   // Refresh groups
+        fetchUsers()    // Refresh users
     }
     
     // MARK: - Setup Views
-    
-    // Scroll
     private func setupScrollView() {
         // Remove existing views first
         view.subviews.forEach { $0.removeFromSuperview() }
@@ -88,4 +83,38 @@ class PeopleViewController: UIViewController {
             stackView.addArrangedSubview(personView)
         }
     }
+    
+    // MARK: - API Integration
+    
+    /// Fetches all groups from the backend
+    private func fetchGroups() {
+        APIService.shared.fetch("/groups/", responseType: [String: [Group]].self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self.groups = response["groups"] ?? []
+                    self.setupScrollView()  // Refresh the scroll view
+                case .failure(let error):
+                    print("Error fetching groups:", error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    // Fetches all users from the backend
+    private func fetchUsers() {
+        APIService.shared.fetch("/users/", responseType: [String: [User]].self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    self.users = response["users"] ?? []
+                    self.setupScrollView()  // Refresh the scroll view
+                case .failure(let error):
+                    print("Error fetching users:", error.localizedDescription)
+                }
+            }
+        }
+    }
 }
+
+

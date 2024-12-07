@@ -9,7 +9,6 @@ import UIKit
 
 protocol CommentSectionViewDelegate: AnyObject {
     func createPost(name: String, description: String)
-    func viewComments(for post: Post)
 }
 
 class CommentSectionView: UIView {
@@ -21,9 +20,7 @@ class CommentSectionView: UIView {
     private let postButton = UIButton(type: .system)
     
     private var posts: [Post] = [] {
-        didSet {
-            updatePostsDisplay()
-        }
+        didSet { updatePostsDisplay() }
     }
     
     weak var delegate: CommentSectionViewDelegate?
@@ -47,6 +44,7 @@ class CommentSectionView: UIView {
         addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         
+        // Configure text fields and button
         nameTextField.placeholder = "Enter post title..."
         nameTextField.borderStyle = .roundedRect
         
@@ -65,7 +63,7 @@ class CommentSectionView: UIView {
         
         addSubview(entryStackView)
         entryStackView.translatesAutoresizingMaskIntoConstraints = false
-
+        
         NSLayoutConstraint.activate([
             entryStackView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             entryStackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
@@ -77,7 +75,8 @@ class CommentSectionView: UIView {
             stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
     }
-
+    
+    // MARK: - Update UI
     private func updatePostsDisplay() {
         stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
@@ -86,7 +85,7 @@ class CommentSectionView: UIView {
             stackView.addArrangedSubview(postView)
         }
     }
-
+    
     private func createPostView(for post: Post) -> UIView {
         let containerView = UIView()
         containerView.layer.cornerRadius = 8
@@ -95,68 +94,106 @@ class CommentSectionView: UIView {
         containerView.backgroundColor = .systemGray6
         
         let titleLabel = UILabel()
-        titleLabel.text = post.post_name
+        titleLabel.text = post.postName
         titleLabel.font = .boldSystemFont(ofSize: 16)
-        titleLabel.textColor = .black
         
         let descriptionLabel = UILabel()
-        descriptionLabel.text = post.description
+        descriptionLabel.text = post.postDescription
         descriptionLabel.font = .systemFont(ofSize: 14)
-        descriptionLabel.textColor = .darkGray
         descriptionLabel.numberOfLines = 0
         
         let timestampLabel = UILabel()
         timestampLabel.text = post.timestamp
         timestampLabel.font = .italicSystemFont(ofSize: 12)
         timestampLabel.textColor = .gray
+    
         
-        let commentButton = UIButton(type: .system)
-        let commentCount = MockData.comments.filter { $0.post_id == post.id }.count
-        commentButton.setTitle("View Comments (\(commentCount))", for: .normal)
-        commentButton.backgroundColor = .systemGreen
-        commentButton.setTitleColor(.white, for: .normal)
-        commentButton.layer.cornerRadius = 8
-        commentButton.addTarget(self, action: #selector(viewCommentsButtonTapped(_:)), for: .touchUpInside)
-        commentButton.tag = post.id
+        let postStack = UIStackView(arrangedSubviews: [titleLabel, descriptionLabel, timestampLabel])
+        postStack.axis = .vertical
+        postStack.spacing = 8
+        containerView.addSubview(postStack)
         
-        let stack = UIStackView(arrangedSubviews: [titleLabel, descriptionLabel, timestampLabel, commentButton])
-        stack.axis = .vertical
-        stack.spacing = 8
-        stack.alignment = .fill
-        
-        containerView.addSubview(stack)
-        stack.translatesAutoresizingMaskIntoConstraints = false
+        postStack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
-            stack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
-            stack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            stack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -8)
+            postStack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
+            postStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
+            postStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
+            postStack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -8)
         ])
         
         return containerView
     }
 
-    @objc private func viewCommentsButtonTapped(_ sender: UIButton) {
-        guard let post = MockData.posts.first(where: { $0.id == sender.tag }) else { return }
-        delegate?.viewComments(for: post)
-    }
-
-
     // MARK: - Actions
-    @objc private func createPost() {
-        guard let name = nameTextField.text, !name.isEmpty,
-              let description = descriptionTextField.text, !description.isEmpty else { return }
-        
-        delegate?.createPost(name: name, description: description)
-        nameTextField.text = ""
-        descriptionTextField.text = ""
-    }
 
-    // MARK: - Public Methods
+    
     func setPosts(_ posts: [Post]) {
         self.posts = posts
     }
+    
+    @objc public func createPost() {
+        guard let name = nameTextField.text, !name.isEmpty,
+              let description = descriptionTextField.text, !description.isEmpty else {
+            showAlert(title: "Error", message: "Both title and description are required.")
+            return
+        }
+        
+        let newPost = Post(
+            id: 0,  // Backend will generate ID
+            postName: name,
+            postDescription: description,
+            timestamp: DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short),
+            comments: []
+        )
+
+        APIService.shared.create("/posts/", payload: newPost, responseType: Post.self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let createdPost):
+                    self.posts.insert(createdPost, at: 0)
+                    self.nameTextField.text = ""
+                    self.descriptionTextField.text = ""
+                    print("Post created successfully:", createdPost)
+                case .failure(let error):
+                    print("Error creating post:", error.localizedDescription)
+                    self.showAlert(title: "Error", message: "Failed to create post.")
+                }
+            }
+        }
+    }
+    
+    
+    
+    // MARK: - API Integration
+    @objc public func fetchPosts() {
+        APIService.shared.fetch("/posts/", responseType: [String: [Post]].self) { result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let response):
+                    if let fetchedPosts = response["posts"] {
+                        self.posts = fetchedPosts
+                        print("Fetched Posts:", fetchedPosts)
+                    } else {
+                        print("Unexpected Response Format")
+                    }
+                case .failure(let error):
+                    print("Error fetching posts:", error.localizedDescription)
+                    self.showAlert(title: "Error", message: "Failed to fetch posts.")
+                }
+            }
+        }
+    }
+
+    // MARK: - Utility
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        UIApplication.shared.keyWindow?.rootViewController?.present(alert, animated: true)
+    }
 }
+
+
+
 
 
 
