@@ -10,198 +10,143 @@ import UIKit
 class HomeViewController: UIViewController {
     
     // MARK: - Properties (views)
-    private let scrollView = UIScrollView()
-    private let groupsStackView = UIStackView()
-    private let peopleStackView = UIStackView()
-    private let commentSectionView = CommentSectionView()
-    
-    // MARK: - Properties (local storage)
-    private var groups = MockData.groups
-    private var users = MockData.users
-    private var comments = MockData.comments
-    private var currentUser = MockData.currentUser
-    
-    // MARK: - Properties (UI Elements)
-    private let settingsButton = UIButton(type: .system)
-    
+    private let scrollView = UIScrollView() // Scrollable area for all content
+    private let contentView = UIView() // Container for all subviews within the scroll view
+    private let profileButton = UIButton(type: .system) // Button to view the user's profile
+    private let groupsButton = UIButton(type: .system) // Button to view all groups
+    private let peopleButton = UIButton(type: .system) // Button to view people in groups
+    private let commentSectionView = CommentSectionView() // Embedded comment section
+
+    // MARK: - Properties (data)
+    private var groups = MockData.groups // Reference to the current list of groups
+    private var users = MockData.users // Reference to the current list of users
+    private var comments = MockData.comments // Reference to the current list of comments
+    private var currentUser = MockData.currentUser // The current logged-in user
+
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
-        title = "Study Match"
-        
-        setupSettingsButton()
+        title = "Study Match" // Title for the navigation bar
         setupScrollView()
-        setupGroupsSection()
-        setupPeopleSection()
+        setupButtons()
         setupCommentSection()
     }
-    
+
     // MARK: - Setup Views
-    
-    private func setupSettingsButton() {
-        settingsButton.setTitle("Change Name / Create Group", for: .normal)
-        settingsButton.titleLabel?.font = .boldSystemFont(ofSize: 16)
-        settingsButton.setTitleColor(.white, for: .normal)
-        settingsButton.backgroundColor = .systemBlue
-        settingsButton.layer.cornerRadius = 8
-        settingsButton.addTarget(self, action: #selector(navigateToSettings), for: .touchUpInside)
-        
-        view.addSubview(settingsButton)
-        settingsButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            settingsButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            settingsButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            settingsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            settingsButton.heightAnchor.constraint(equalToConstant: 50)
-        ])
-    }
-    
+
+    // Sets up the scrolling
     private func setupScrollView() {
         view.addSubview(scrollView)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: settingsButton.bottomAnchor, constant: 16),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        
-        let contentView = UIView()
         scrollView.addSubview(contentView)
         contentView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
             contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
+    }
+
+    // Arranges the buttons for navigation
+    private func setupButtons() {
+        configureButton(profileButton, title: "User Profile", action: #selector(viewProfile))
+        configureButton(groupsButton, title: "Groups", action: #selector(viewGroups))
+        configureButton(peopleButton, title: "People", action: #selector(viewPeople))
         
-        contentView.addSubview(groupsStackView)
-        contentView.addSubview(peopleStackView)
+        let buttonStack = UIStackView(arrangedSubviews: [profileButton, groupsButton, peopleButton])
+        buttonStack.axis = .vertical // Button stack
+        buttonStack.spacing = 16
+        buttonStack.alignment = .fill
+        
+        contentView.addSubview(buttonStack)
+        buttonStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            buttonStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            buttonStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            buttonStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+        ])
+    }
+
+    // Decorating a button
+    private func configureButton(_ button: UIButton, title: String, action: Selector) {
+        button.setTitle(title, for: .normal)
+        button.titleLabel?.font = .boldSystemFont(ofSize: 18)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .blue
+        button.layer.cornerRadius = 8
+        button.addTarget(self, action: action, for: .touchUpInside)
+        button.heightAnchor.constraint(equalToConstant: 50).isActive = true
+    }
+
+    // Comment section
+    private func setupCommentSection() {
         contentView.addSubview(commentSectionView)
-        
-        groupsStackView.axis = .vertical
-        groupsStackView.spacing = 16
-        
-        peopleStackView.axis = .vertical
-        peopleStackView.spacing = 16
-        
-        groupsStackView.translatesAutoresizingMaskIntoConstraints = false
-        peopleStackView.translatesAutoresizingMaskIntoConstraints = false
+        commentSectionView.setPosts(MockData.posts) // Load posts into the comment section
+        commentSectionView.delegate = self // Delegate
         commentSectionView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            groupsStackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            groupsStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            groupsStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            
-            peopleStackView.topAnchor.constraint(equalTo: groupsStackView.bottomAnchor, constant: 32),
-            peopleStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            peopleStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            
-            commentSectionView.topAnchor.constraint(equalTo: peopleStackView.bottomAnchor, constant: 32),
+            commentSectionView.topAnchor.constraint(equalTo: peopleButton.bottomAnchor, constant: 32),
             commentSectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             commentSectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             commentSectionView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
     }
-    
-    private func setupGroupsSection() {
-        groupsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let groupsLabel = UILabel()
-        groupsLabel.text = "Groups"
-        groupsLabel.font = .boldSystemFont(ofSize: 20)
-        groupsLabel.textAlignment = .center
-        groupsStackView.addArrangedSubview(groupsLabel)
-        
-        for group in groups {
-            let groupView = GroupView(group: group)
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleGroupTap(_:)))
-            groupView.addGestureRecognizer(tapGesture)
-            groupView.isUserInteractionEnabled = true
-            groupView.tag = group.id
-            
-            groupsStackView.addArrangedSubview(groupView)
-        }
-    }
-    
-    @objc private func handleGroupTap(_ sender: UITapGestureRecognizer) {
-        guard let groupView = sender.view as? GroupView,
-              let selectedGroup = groups.first(where: { $0.id == groupView.tag }) else {
-            return
-        }
-        let groupDetailVC = GroupDetailViewController(group: selectedGroup)
-        navigationController?.pushViewController(groupDetailVC, animated: true)
-    }
 
-    private func setupPeopleSection() {
-        peopleStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        let peopleLabel = UILabel()
-        peopleLabel.text = "People"
-        peopleLabel.font = .boldSystemFont(ofSize: 20)
-        peopleLabel.textAlignment = .center
-        peopleStackView.addArrangedSubview(peopleLabel)
-        
-        for user in users {
-            let personView = PersonView(user: user, groups: MockData.groups)
-            peopleStackView.addArrangedSubview(personView)
-        }
-    }
-    
-    private func setupCommentSection() {
-        commentSectionView.setComments(MockData.comments)
-        commentSectionView.delegate = self
-        scrollView.addSubview(commentSectionView)
-        commentSectionView.translatesAutoresizingMaskIntoConstraints = false
-
-        NSLayoutConstraint.activate([
-            commentSectionView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            commentSectionView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            commentSectionView.topAnchor.constraint(equalTo: peopleStackView.bottomAnchor, constant: 32),
-            commentSectionView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor)
-        ])
-    }
-
-    
     // MARK: - Navigation
-    @objc private func navigateToSettings() {
-        let settingsView = SettingsView(currentUser: currentUser, groups: groups) { [weak self] updatedUser, updatedGroups in
+
+    // Navigate to Profile
+    @objc private func viewProfile() {
+        let profile = SettingsView(currentUser: currentUser, groups: groups) { [weak self] updatedUser, updatedGroups in
+            // I think this updates the user?
             guard let self = self else { return }
             self.currentUser = updatedUser
             self.groups = updatedGroups
-            self.updateUI()
         }
-        navigationController?.pushViewController(settingsView, animated: true)
+        navigationController?.pushViewController(profile, animated: true)
     }
 
-    private func updateUI() {
-        setupGroupsSection()
-        setupPeopleSection()
+    // Navigate to Groups
+    @objc private func viewGroups() {
+        let groupsVC = GroupsViewController()
+        navigationController?.pushViewController(groupsVC, animated: true)
+    }
+
+    // Navigate to People
+    @objc private func viewPeople() {
+        let peopleVC = PeopleViewController(groups: groups)
+        navigationController?.pushViewController(peopleVC, animated: true)
     }
 }
 
 // MARK: - CommentSectionViewDelegate
 extension HomeViewController: CommentSectionViewDelegate {
-    func postComment(text: String) {
-        let newComment = Comment(
-            id: MockData.comments.count + 1,
-            description: text,
+    // Create Post
+    func createPost(name: String, description: String) {
+        let newPost = Post(
+            id: MockData.posts.count + 1,
+            post_name: name,
+            description: description,
             timestamp: DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short),
-            post_id: 1 // Adjust post_id as needed
+            comments: []
         )
-        MockData.comments.insert(newComment, at: 0)
-        commentSectionView.setComments(MockData.comments)
+        MockData.posts.insert(newPost, at: 0) // Add the new post to the top of the list
+        commentSectionView.setPosts(MockData.posts) // Refresh
+    }
+
+    func viewComments(for post: Post) {
+        let postDetailVC = PostDetailViewController(post: post)
+        navigationController?.pushViewController(postDetailVC, animated: true)
     }
 }
-
-
-
-
-
-
-

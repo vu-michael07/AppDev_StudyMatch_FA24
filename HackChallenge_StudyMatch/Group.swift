@@ -12,32 +12,23 @@ struct Group: Identifiable, Codable {
     let id: Int
     let name: String
     var users: [User]
-    var rates: [Rate]
-    let tasks: [Task]
+    var tasks: [Task]
 }
 
 struct User: Identifiable, Codable {
     let id: Int
     var name: String
     let netid: String
-    let group_id: Int?
-    var rates: [Rate]
+    var group_id: Int?
 }
 
 
 struct Task: Identifiable, Codable {
     let id: Int
-    let task_name: String
-    let description: String
-    let due_date: String
+    var task_name: String
+    var description: String
+    var due_date: String
     let group_id: Int
-}
-
-struct Rate: Identifiable, Codable {
-    let id: Int
-    let stars: Int
-    var users: [User]
-    var groups: [Group]
 }
 
 struct Post: Identifiable, Codable {
@@ -45,7 +36,7 @@ struct Post: Identifiable, Codable {
     let post_name: String
     let description: String
     let timestamp: String
-    let comments: [Comment]
+    var comments: [Comment]
 }
 
 struct Comment: Identifiable, Codable {

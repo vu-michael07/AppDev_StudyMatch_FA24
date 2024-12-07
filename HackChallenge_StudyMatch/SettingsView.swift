@@ -10,20 +10,22 @@ import UIKit
 class SettingsView: UIViewController {
     
     // MARK: - Properties (data)
-    private var currentUser: User
-    private var groups: [Group]
-    private let onUpdate: (User, [Group]) -> Void
+    private var currentUser: User? // Represents the currently logged-in user
+    private let groups: [Group] // All available groups
+    private let onUpdate: (User, [Group]) -> Void // Callback to update data when changes occur
     
     // MARK: - Properties (views)
-    private let scrollView = UIScrollView()
-    private let contentView = UIView()
-    private let userNameTextField = UITextField()
-    private let setNameButton = UIButton(type: .system)
-    private let groupNameTextField = UITextField()
-    private let createGroupButton = UIButton(type: .system)
+    private let userNameLabel = UILabel() // Displays the user's name
+    private let netIDLabel = UILabel() // Displays the user's NetID
+    private let groupsLabel = UILabel() // Displays the groups the user belongs to
+    
+    private let netIDTextField = UITextField() // Text field for entering the NetID
+    private let findUserButton = UIButton(type: .system) // Button to find or create a user
+    private var nameTextField: UITextField? // Text field for entering the name
+    private var createUserButton: UIButton? // Button to create a new user
     
     // MARK: - Init
-    init(currentUser: User, groups: [Group], onUpdate: @escaping (User, [Group]) -> Void) {
+    init(currentUser: User?, groups: [Group], onUpdate: @escaping (User, [Group]) -> Void) {
         self.currentUser = currentUser
         self.groups = groups
         self.onUpdate = onUpdate
@@ -38,99 +40,200 @@ class SettingsView: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
-        title = "Settings"
+        title = "Profile"
         
-        setupScrollView()
-        setupContent()
+        setupView()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Sync the current user with the mock database
+        if let updatedUser = MockData.users.first(where: { $0.id == MockData.currentUser.id }) {
+            currentUser = updatedUser
+        }
+        
+        // Refresh the UI
+        displayUserInfo()
     }
     
     // MARK: - Setup Views
     
-    private func setupScrollView() {
-        view.addSubview(scrollView)
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        
-        scrollView.addSubview(contentView)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
-        ])
-    }
-    
-    private func setupContent() {
-        let stackView = UIStackView()
+    private func setupView() {
+        let stackView = UIStackView() // Profile information
         stackView.axis = .vertical
         stackView.spacing = 16
-        stackView.alignment = .fill
+        stackView.alignment = .leading
         
-        userNameTextField.placeholder = "Enter your new name"
-        userNameTextField.borderStyle = .roundedRect
-        userNameTextField.text = currentUser.name
+        // Substack for labels and data
+        let labelsStack = UIStackView()
+        labelsStack.axis = .horizontal
+        labelsStack.spacing = 16
+        labelsStack.distribution = .fillEqually
         
-        setNameButton.setTitle("Set Name", for: .normal)
-        setNameButton.addTarget(self, action: #selector(updateUserName), for: .touchUpInside)
+        let leftColumn = UIStackView()
+        leftColumn.axis = .vertical
+        leftColumn.spacing = 8
+        leftColumn.alignment = .leading
         
-        let nameStack = UIStackView(arrangedSubviews: [userNameTextField, setNameButton])
-        nameStack.axis = .horizontal
-        nameStack.spacing = 8
+        let rightColumn = UIStackView()
+        rightColumn.axis = .vertical
+        rightColumn.spacing = 8
+        rightColumn.alignment = .leading
         
-        stackView.addArrangedSubview(nameStack)
+        // Left column labels
+        let labels = ["Username:", "NetID:", "Groups:"]
+        for label in labels {
+            let lbl = UILabel()
+            lbl.text = label
+            lbl.font = .systemFont(ofSize: 16, weight: .bold)
+            leftColumn.addArrangedSubview(lbl)
+        }
         
-        groupNameTextField.placeholder = "Enter new group name"
-        groupNameTextField.borderStyle = .roundedRect
+        // Right column placeholders
+        rightColumn.addArrangedSubview(userNameLabel)
+        rightColumn.addArrangedSubview(netIDLabel)
+        rightColumn.addArrangedSubview(groupsLabel)
         
-        createGroupButton.setTitle("Create Group", for: .normal)
-        createGroupButton.addTarget(self, action: #selector(createGroup), for: .touchUpInside)
+        labelsStack.addArrangedSubview(leftColumn)
+        labelsStack.addArrangedSubview(rightColumn)
+        stackView.addArrangedSubview(labelsStack)
         
-        let groupStack = UIStackView(arrangedSubviews: [groupNameTextField, createGroupButton])
-        groupStack.axis = .horizontal
-        groupStack.spacing = 8
+        // Add NetID input
+        netIDTextField.placeholder = "Enter your NetID"
+        netIDTextField.borderStyle = .roundedRect
         
-        stackView.addArrangedSubview(groupStack)
+        styleButton(findUserButton, title: "Find or Create")
+        findUserButton.addTarget(self, action: #selector(findOrCreateUser), for: .touchUpInside)
         
-        contentView.addSubview(stackView)
+        let netIDStack = UIStackView(arrangedSubviews: [netIDTextField, findUserButton])
+        netIDStack.axis = .horizontal
+        netIDStack.spacing = 8
+        stackView.addArrangedSubview(netIDStack)
+        
+        // Add stack
+        view.addSubview(stackView)
         stackView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            stackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            stackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            stackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            stackView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -16)
+            stackView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
         ])
+    }
+    
+    // "Create User"
+    private func setupNameInputField() {
+        guard nameTextField == nil, createUserButton == nil else { return }
+        
+        let nameTextField = UITextField()
+        nameTextField.placeholder = "Enter your name"
+        nameTextField.borderStyle = .roundedRect
+        self.nameTextField = nameTextField
+        
+        let createUserButton = UIButton(type: .system)
+        styleButton(createUserButton, title: "Create User")
+        createUserButton.addTarget(self, action: #selector(createUser), for: .touchUpInside)
+        self.createUserButton = createUserButton
+        
+        let nameStack = UIStackView(arrangedSubviews: [nameTextField, createUserButton])
+        nameStack.axis = .horizontal
+        nameStack.spacing = 8
+        
+        view.addSubview(nameStack)
+        nameStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            nameStack.topAnchor.constraint(equalTo: netIDTextField.bottomAnchor, constant: 16),
+            nameStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            nameStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
+        ])
+    }
+    
+    // MARK: - Display User Information
+    
+    // Population
+    private func displayUserInfo() {
+        guard let user = currentUser else {
+            userNameLabel.text = "N/A"
+            netIDLabel.text = "N/A"
+            groupsLabel.text = "N/A"
+            return
+        }
+
+        userNameLabel.text = user.name
+        netIDLabel.text = user.netid
+
+        // Groups
+        let userGroups = MockData.groups.filter { $0.users.contains(where: { $0.id == user.id }) }
+        groupsLabel.text = userGroups.isEmpty
+            ? "None"
+            : userGroups.map { $0.name }.joined(separator: ", ")
     }
     
     // MARK: - Actions
     
-    @objc private func updateUserName() {
-        guard let newName = userNameTextField.text, !newName.isEmpty else { return }
-        currentUser.name = newName
-        onUpdate(currentUser, groups)
-        showAlert(title: "Success", message: "Your name has been updated.")
+    // Creation or finding a user
+    @objc private func findOrCreateUser() {
+        guard let netID = netIDTextField.text, !netID.isEmpty else {
+            showAlert(title: "Error", message: "NetID cannot be empty.")
+            return
+        }
+        
+        if let existingUser = MockData.users.first(where: { $0.netid == netID }) {
+            currentUser = existingUser
+            MockData.currentUser = existingUser // Sync
+            onUpdate(existingUser, groups)
+            displayUserInfo()
+        } else {
+            setupNameInputField()
+        }
     }
     
-    @objc private func createGroup() {
-        guard let groupName = groupNameTextField.text, !groupName.isEmpty else { return }
-        let newGroup = Group(id: groups.count + 1, name: groupName, users: [currentUser], rates: [], tasks: [])
-        groups.append(newGroup)
-        onUpdate(currentUser, groups) 
-        groupNameTextField.text = ""
-        showAlert(title: "Success", message: "New group '\(groupName)' created.")
+    // Creation
+    @objc private func createUser() {
+        guard let name = nameTextField?.text, !name.isEmpty,
+              let netID = netIDTextField.text, !netID.isEmpty else {
+            showAlert(title: "Error", message: "Both name and NetID are required.")
+            return
+        }
+        
+        let newUser = User(
+            id: MockData.users.count + 1,
+            name: name,
+            netid: netID,
+            group_id: nil
+        )
+        
+        MockData.users.append(newUser)
+        currentUser = newUser
+        MockData.currentUser = newUser // Sync
+        onUpdate(newUser, groups)
+        displayUserInfo()
+        
+        // Remove temporary UI
+        nameTextField?.removeFromSuperview()
+        createUserButton?.removeFromSuperview()
+        nameTextField = nil
+        createUserButton = nil
     }
     
+    // MARK: - Utility
+    
+    // Button styling helper
+    private func styleButton(_ button: UIButton, title: String) {
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .systemBlue
+        button.layer.cornerRadius = 8
+        button.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        button.widthAnchor.constraint(equalToConstant: 120).isActive = true
+    }
+    
+    // Alert
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
 }
-

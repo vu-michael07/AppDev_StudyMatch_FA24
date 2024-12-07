@@ -5,14 +5,22 @@
 //  Created by Michael Vu on 12/5/24.
 //
 
-
 import UIKit
 
 class TaskView: UIView {
     
+    private let deleteButton = UIButton(type: .system)
+    private let editButton = UIButton(type: .system)
+    private let task: Task
+    private let onDelete: (Task) -> Void
+    private let onEdit: (Task) -> Void
+    
     // MARK: - Init
     
-    init(task: Task) {
+    init(task: Task, onDelete: @escaping (Task) -> Void, onEdit: @escaping (Task) -> Void) {
+        self.task = task
+        self.onDelete = onDelete
+        self.onEdit = onEdit
         super.init(frame: .zero)
         setupView(task: task)
     }
@@ -45,7 +53,24 @@ class TaskView: UIView {
         dueDateLabel.font = .systemFont(ofSize: 14)
         dueDateLabel.textAlignment = .left
         
-        let stackView = UIStackView(arrangedSubviews: [nameLabel, descriptionLabel, dueDateLabel])
+        deleteButton.setTitle("Delete Task", for: .normal)
+        deleteButton.setTitleColor(.white, for: .normal)
+        deleteButton.backgroundColor = .red
+        deleteButton.layer.cornerRadius = 5
+        deleteButton.addTarget(self, action: #selector(deleteTask), for: .touchUpInside)
+        
+        editButton.setTitle("Edit Task", for: .normal)
+        editButton.setTitleColor(.white, for: .normal)
+        editButton.backgroundColor = .systemBlue
+        editButton.layer.cornerRadius = 5
+        editButton.addTarget(self, action: #selector(editTask), for: .touchUpInside)
+        
+        let buttonStackView = UIStackView(arrangedSubviews: [editButton, deleteButton])
+        buttonStackView.axis = .horizontal
+        buttonStackView.spacing = 16
+        buttonStackView.distribution = .fillEqually
+        
+        let stackView = UIStackView(arrangedSubviews: [nameLabel, descriptionLabel, dueDateLabel, buttonStackView])
         stackView.axis = .vertical
         stackView.spacing = 8
         
@@ -59,5 +84,16 @@ class TaskView: UIView {
             stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8)
         ])
     }
+    
+    // MARK: - Actions
+    
+    @objc private func deleteTask() {
+        onDelete(task)
+    }
+    
+    @objc private func editTask() {
+        onEdit(task)
+    }
 }
+
 

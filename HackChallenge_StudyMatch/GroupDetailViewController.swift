@@ -12,11 +12,11 @@ class GroupDetailViewController: UIViewController {
     // MARK: - Properties (views)
     
     private let scrollView = UIScrollView()
-    private let groupRatingLabel = UILabel()
-    private let groupRatingTextField = UITextField()
-    private let groupRateButton = UIButton(type: .system)
+    private let contentView = UIView()
     private let peopleStackView = UIStackView()
     private let tasksStackView = UIStackView()
+    private let joinGroupButton = UIButton(type: .system)
+
     
     // MARK: - Properties (data)
     
@@ -40,29 +40,40 @@ class GroupDetailViewController: UIViewController {
         view.backgroundColor = .white
         title = group.name
         setupScrollView()
-        setupGroupRating()
         setupPeopleSection()
         setupTasksSection()
+        setupJoinGroupButton()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Refresh group data from MockData
+        if let updatedGroup = MockData.groups.first(where: { $0.id == group.id }) {
+            group = updatedGroup
+        }
+        
+        // Refresh UI
+        refreshTasks()
+        setupPeopleSection()
+        updateJoinGroupButtonState() // Update the join/leave button state
     }
     
     // MARK: - Setup Views
     
     private func setupScrollView() {
         view.addSubview(scrollView)
+        scrollView.addSubview(contentView)
+        
         scrollView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        
-        let contentView = UIView()
-        scrollView.addSubview(contentView)
-        contentView.translatesAutoresizingMaskIntoConstraints = false
-        
-        NSLayoutConstraint.activate([
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
             contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
@@ -70,34 +81,21 @@ class GroupDetailViewController: UIViewController {
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
         
-        contentView.addSubview(groupRatingLabel)
-        contentView.addSubview(groupRatingTextField)
-        contentView.addSubview(groupRateButton)
+
+        contentView.addSubview(joinGroupButton)
         contentView.addSubview(peopleStackView)
         contentView.addSubview(tasksStackView)
-        
-        groupRatingLabel.translatesAutoresizingMaskIntoConstraints = false
-        groupRatingTextField.translatesAutoresizingMaskIntoConstraints = false
-        groupRateButton.translatesAutoresizingMaskIntoConstraints = false
+        joinGroupButton.translatesAutoresizingMaskIntoConstraints = false
         peopleStackView.translatesAutoresizingMaskIntoConstraints = false
         tasksStackView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            groupRatingLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            groupRatingLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            groupRatingLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            joinGroupButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            joinGroupButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            joinGroupButton.widthAnchor.constraint(equalToConstant: 120),
+            joinGroupButton.heightAnchor.constraint(equalToConstant: 40),
             
-            groupRatingTextField.topAnchor.constraint(equalTo: groupRatingLabel.bottomAnchor, constant: 8),
-            groupRatingTextField.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            groupRatingTextField.widthAnchor.constraint(equalToConstant: 100),
-            groupRatingTextField.heightAnchor.constraint(equalToConstant: 40),
-            
-            groupRateButton.centerYAnchor.constraint(equalTo: groupRatingTextField.centerYAnchor),
-            groupRateButton.leadingAnchor.constraint(equalTo: groupRatingTextField.trailingAnchor, constant: 8),
-            groupRateButton.widthAnchor.constraint(equalToConstant: 80),
-            groupRateButton.heightAnchor.constraint(equalToConstant: 40),
-            
-            peopleStackView.topAnchor.constraint(equalTo: groupRatingTextField.bottomAnchor, constant: 16),
+            peopleStackView.topAnchor.constraint(equalTo: joinGroupButton.bottomAnchor, constant: 32),
             peopleStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             peopleStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             
@@ -108,27 +106,13 @@ class GroupDetailViewController: UIViewController {
         ])
     }
     
-    private func setupGroupRating() {
-        let averageRating = group.rates.isEmpty ? "N/A" : String(format: "%.2f", Double(group.rates.map { $0.stars }.reduce(0, +)) / Double(group.rates.count))
-        groupRatingLabel.text = "Average Group Rating: \(averageRating)"
-        groupRatingLabel.font = .boldSystemFont(ofSize: 20)
-        groupRatingLabel.textAlignment = .center
-        
-        groupRatingTextField.placeholder = "Rate 0-10"
-        groupRatingTextField.borderStyle = .roundedRect
-        groupRatingTextField.keyboardType = .numberPad
-        
-        groupRateButton.setTitle("Rate", for: .normal)
-        groupRateButton.backgroundColor = .red
-        groupRateButton.setTitleColor(.white, for: .normal)
-        groupRateButton.layer.cornerRadius = 5
-        groupRateButton.addTarget(self, action: #selector(rateGroup), for: .touchUpInside)
-    }
+
     
     private func setupPeopleSection() {
+        peopleStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         peopleStackView.axis = .vertical
         peopleStackView.spacing = 16
-        
+
         let peopleLabel = UILabel()
         peopleLabel.text = "People"
         peopleLabel.font = .boldSystemFont(ofSize: 20)
@@ -142,61 +126,219 @@ class GroupDetailViewController: UIViewController {
         }
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        
-        if let updatedGroup = MockData.groups.first(where: { $0.id == group.id }) {
-            self.group = updatedGroup
-        }
-        
-        setupGroupRating()
-        setupPeopleSection()
-    }
-    
     private func setupTasksSection() {
+        tasksStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         tasksStackView.axis = .vertical
         tasksStackView.spacing = 16
         
+        // Add the Tasks label
         let tasksLabel = UILabel()
         tasksLabel.text = "Tasks"
         tasksLabel.font = .boldSystemFont(ofSize: 20)
         tasksLabel.textAlignment = .center
-        
         tasksStackView.addArrangedSubview(tasksLabel)
         
+        // Add the "Add Task" section
+        let addTaskStackView = UIStackView()
+        addTaskStackView.axis = .vertical
+        addTaskStackView.spacing = 8
+        
+        let taskNameField = UITextField()
+        taskNameField.placeholder = "Task Name"
+        taskNameField.borderStyle = .roundedRect
+        
+        let taskDescriptionField = UITextField()
+        taskDescriptionField.placeholder = "Task Description"
+        taskDescriptionField.borderStyle = .roundedRect
+        
+        let taskDueDateField = UITextField()
+        taskDueDateField.placeholder = "Due Date (YYYY-MM-DD)"
+        taskDueDateField.borderStyle = .roundedRect
+        
+        let addTaskButton = UIButton(type: .system)
+        styleButton(addTaskButton, title: "Add Task")
+        addTaskButton.addTarget(self, action: #selector(addTask(_:)), for: .touchUpInside)
+        
+        addTaskStackView.addArrangedSubview(taskNameField)
+        addTaskStackView.addArrangedSubview(taskDescriptionField)
+        addTaskStackView.addArrangedSubview(taskDueDateField)
+        addTaskStackView.addArrangedSubview(addTaskButton)
+        
+        tasksStackView.addArrangedSubview(addTaskStackView)
+        
+        refreshTasks()
+    }
+    
+    private func refreshTasks() {
+        tasksStackView.arrangedSubviews.filter { $0 is TaskView }.forEach { $0.removeFromSuperview() }
+        
         for task in group.tasks {
-            let taskView = TaskView(task: task)
+            let taskView = TaskView(
+                task: task,
+                onDelete: { [weak self] taskToDelete in
+                    self?.deleteTask(taskToDelete)
+                },
+                onEdit: { [weak self] taskToEdit in
+                    self?.editTask(taskToEdit)
+                }
+            )
             tasksStackView.addArrangedSubview(taskView)
+        }
+    }
+
+
+
+    @objc private func addTask(_ sender: UIButton) {
+        guard let stackView = sender.superview as? UIStackView,
+              let nameField = stackView.arrangedSubviews[0] as? UITextField,
+              let descriptionField = stackView.arrangedSubviews[1] as? UITextField,
+              let dueDateField = stackView.arrangedSubviews[2] as? UITextField,
+              let taskName = nameField.text, !taskName.isEmpty,
+              let taskDescription = descriptionField.text, !taskDescription.isEmpty,
+              let dueDate = dueDateField.text, !dueDate.isEmpty else {
+            return
+        }
+        
+        let newTask = Task(
+            id: MockData.tasks.count + 1,
+            task_name: taskName,
+            description: taskDescription,
+            due_date: dueDate,
+            group_id: group.id
+        )
+        
+        // Update MockData
+        if let groupIndex = MockData.groups.firstIndex(where: { $0.id == group.id }) {
+            MockData.groups[groupIndex].tasks.append(newTask)
+            group = MockData.groups[groupIndex] // Refresh local group
+        }
+        MockData.tasks.append(newTask)
+        refreshTasks()
+        
+        nameField.text = ""
+        descriptionField.text = ""
+        dueDateField.text = ""
+    }
+
+    private func deleteTask(_ task: Task) {
+        if let groupIndex = MockData.groups.firstIndex(where: { $0.id == group.id }),
+           let taskIndex = MockData.groups[groupIndex].tasks.firstIndex(where: { $0.id == task.id }) {
+            MockData.groups[groupIndex].tasks.remove(at: taskIndex)
+            group = MockData.groups[groupIndex] // Refresh local group
+        }
+        if let mockIndex = MockData.tasks.firstIndex(where: { $0.id == task.id }) {
+            MockData.tasks.remove(at: mockIndex)
+        }
+        refreshTasks()
+    }
+
+    private func editTask(_ task: Task) {
+        // Alerts
+        let alertController = UIAlertController(title: "Edit Task", message: nil, preferredStyle: .alert)
+        
+        alertController.addTextField { textField in
+            textField.text = task.task_name
+            textField.placeholder = "Task Name"
+        }
+        
+        alertController.addTextField { textField in
+            textField.text = task.description
+            textField.placeholder = "Task Description"
+        }
+        
+        alertController.addTextField { textField in
+            textField.text = task.due_date
+            textField.placeholder = "Due Date (YYYY-MM-DD)"
+        }
+        
+        let saveAction = UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+            guard let nameField = alertController.textFields?[0].text, !nameField.isEmpty,
+                  let descriptionField = alertController.textFields?[1].text, !descriptionField.isEmpty,
+                  let dueDateField = alertController.textFields?[2].text, !dueDateField.isEmpty else { return }
+            
+            // Update the task
+            if let groupIndex = MockData.groups.firstIndex(where: { $0.id == self?.group.id }),
+               let taskIndex = MockData.groups[groupIndex].tasks.firstIndex(where: { $0.id == task.id }) {
+                MockData.groups[groupIndex].tasks[taskIndex].task_name = nameField
+                MockData.groups[groupIndex].tasks[taskIndex].description = descriptionField
+                MockData.groups[groupIndex].tasks[taskIndex].due_date = dueDateField
+                
+                // Refresh the local group and UI
+                self?.group = MockData.groups[groupIndex]
+                self?.refreshTasks()
+            }
+        }
+        
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel, handler: nil)
+        alertController.addAction(saveAction)
+        alertController.addAction(cancelAction)
+        
+        present(alertController, animated: true, completion: nil)
+    }
+    
+    private func styleButton(_ button: UIButton, title: String) {
+        button.setTitle(title, for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .systemBlue
+        button.layer.cornerRadius = 8
+        button.heightAnchor.constraint(equalToConstant: 40).isActive = true
+    }
+
+    private func setupJoinGroupButton() {
+        joinGroupButton.layer.cornerRadius = 8
+        joinGroupButton.addTarget(self, action: #selector(joinGroup), for: .touchUpInside)
+        updateJoinGroupButtonState() // Set initial button state
+    }
+    
+    private func updateJoinGroupButtonState() {
+        if group.users.contains(where: { $0.id == MockData.currentUser.id }) {
+            joinGroupButton.setTitle("Leave Group", for: .normal)
+            joinGroupButton.setTitleColor(.white, for: .normal)
+            joinGroupButton.backgroundColor = .systemRed
+        } else if MockData.currentUser.group_id != nil && MockData.currentUser.group_id != group.id {
+            joinGroupButton.setTitle("In Different Group", for: .normal)
+            joinGroupButton.setTitleColor(.white, for: .normal)
+            joinGroupButton.backgroundColor = .black
+        } else {
+            joinGroupButton.setTitle("Join Group", for: .normal)
+            joinGroupButton.setTitleColor(.white, for: .normal)
+            joinGroupButton.backgroundColor = .systemBlue
         }
     }
     
     // MARK: - Actions
     
-    @objc private func rateGroup() {
-        guard let text = groupRatingTextField.text,
-              let rating = Int(text), rating >= 0, rating <= 10 else {
-            groupRateButton.setTitle("Failed", for: .normal)
+    @objc private func joinGroup() {
+        if MockData.currentUser.group_id != nil && MockData.currentUser.group_id != group.id {
+            // User is already in a different group
+            joinGroupButton.setTitle("Failed", for: .normal)
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                self.groupRateButton.setTitle("Rate", for: .normal)
+                self.updateJoinGroupButtonState()
             }
             return
         }
         
+        guard let currentUserIndex = MockData.users.firstIndex(where: { $0.id == MockData.currentUser.id }) else { return }
+
+        if group.users.contains(where: { $0.id == MockData.currentUser.id }) {
+            // Leave Group
+            MockData.users[currentUserIndex].group_id = nil
+            group.users.removeAll { $0.id == MockData.currentUser.id }
+        } else {
+            // Join Group
+            MockData.users[currentUserIndex].group_id = group.id
+            group.users.append(MockData.users[currentUserIndex])
+        }
+
         if let groupIndex = MockData.groups.firstIndex(where: { $0.id == group.id }) {
-            let newRate = Rate(id: MockData.rates.count + 1, stars: rating, users: [], groups: [MockData.groups[groupIndex]])
-            MockData.groups[groupIndex].rates.append(newRate)
-            MockData.rates.append(newRate)
-            
-            group = MockData.groups[groupIndex]
+            MockData.groups[groupIndex].users = group.users
         }
-        
-        groupRatingTextField.text = ""
-        groupRateButton.setTitle("Success", for: .normal)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.groupRateButton.setTitle("Rate", for: .normal)
-        }
-        
-        setupGroupRating()
+
+        MockData.currentUser = MockData.users[currentUserIndex] // Does something
+
+        setupPeopleSection()
+        updateJoinGroupButtonState()
     }
 }
+
 

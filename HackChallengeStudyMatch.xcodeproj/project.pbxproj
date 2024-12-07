@@ -27,6 +27,9 @@
 		AD29C4172D017C7900E84444 /* TaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4162D017C7900E84444 /* TaskView.swift */; };
 		AD29C4212D01810E00E84444 /* CommentSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4202D01810D00E84444 /* CommentSectionView.swift */; };
 		AD29C4292D019A2A00E84444 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4282D019A2A00E84444 /* SettingsView.swift */; };
+		AD29C4312D03A93E00E84444 /* PostDetailViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4302D03A93E00E84444 /* PostDetailViewController.swift */; };
+		AD29C4352D03C2AD00E84444 /* GroupsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4342D03C2AD00E84444 /* GroupsViewController.swift */; };
+		AD29C4372D03C2B600E84444 /* PeopleViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD29C4362D03C2B600E84444 /* PeopleViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,6 +51,9 @@
 		AD29C4162D017C7900E84444 /* TaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskView.swift; sourceTree = "<group>"; };
 		AD29C4202D01810D00E84444 /* CommentSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentSectionView.swift; sourceTree = "<group>"; };
 		AD29C4282D019A2A00E84444 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AD29C4302D03A93E00E84444 /* PostDetailViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostDetailViewController.swift; sourceTree = "<group>"; };
+		AD29C4342D03C2AD00E84444 /* GroupsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupsViewController.swift; sourceTree = "<group>"; };
+		AD29C4362D03C2B600E84444 /* PeopleViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,8 +100,11 @@
 				AD29C4282D019A2A00E84444 /* SettingsView.swift */,
 				AD29C40E2D0179E200E84444 /* GroupView.swift */,
 				AD29C4102D0179E800E84444 /* PersonView.swift */,
+				AD29C4362D03C2B600E84444 /* PeopleViewController.swift */,
 				AD29C4162D017C7900E84444 /* TaskView.swift */,
+				AD29C4342D03C2AD00E84444 /* GroupsViewController.swift */,
 				AD29C4202D01810D00E84444 /* CommentSectionView.swift */,
+				AD29C4302D03A93E00E84444 /* PostDetailViewController.swift */,
 				AD29C4082D016FD000E84444 /* Group.swift */,
 				AD29C4062D016F9500E84444 /* MockData.swift */,
 				2ED700602AF1CF5700B7C687 /* Assets.xcassets */,
@@ -190,13 +199,16 @@
 				AD29C4172D017C7900E84444 /* TaskView.swift in Sources */,
 				AD29C4152D017C6F00E84444 /* GroupDetailViewController.swift in Sources */,
 				AD29C40F2D0179E300E84444 /* GroupView.swift in Sources */,
+				AD29C4372D03C2B600E84444 /* PeopleViewController.swift in Sources */,
 				AD29C4092D016FD000E84444 /* Group.swift in Sources */,
 				AD29C4292D019A2A00E84444 /* SettingsView.swift in Sources */,
 				AD29C4072D016F9500E84444 /* MockData.swift in Sources */,
+				AD29C4312D03A93E00E84444 /* PostDetailViewController.swift in Sources */,
 				AD29C3F92D016EE900E84444 /* UserDetailViewController.swift in Sources */,
 				AD29C4212D01810E00E84444 /* CommentSectionView.swift in Sources */,
 				AD29C40B2D01710B00E84444 /* SceneDelegate.swift in Sources */,
 				2ED700582AF1CF5600B7C687 /* AppDelegate.swift in Sources */,
+				AD29C4352D03C2AD00E84444 /* GroupsViewController.swift in Sources */,
 				AD29C4112D0179E800E84444 /* PersonView.swift in Sources */,
 				AD29C3F72D016EDE00E84444 /* HomeViewController.swift in Sources */,
 				AD29C3FF2D016F1E00E84444 /* Extensions.swift in Sources */,
