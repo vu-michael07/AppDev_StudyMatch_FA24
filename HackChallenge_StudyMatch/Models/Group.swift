@@ -42,6 +42,13 @@ struct GroupUpdatePayload: Codable {
     let group_id: Int?
 }
 
+struct PostCreationPayload: Codable {
+    let post_name: String
+    let description: String
+    let timestamp: String
+}
+
+
 
 struct GroupResponse: Codable {
     let groups: [Group]
@@ -54,43 +61,37 @@ struct Group: Identifiable, Codable {
     var tasks: [Task]
 }
 
-
-
-struct PostResponse: Decodable {
+struct PostResponse: Codable {
     let posts: [Post]
 }
 
-struct Post: Identifiable, Codable {
+struct Post: Codable, Identifiable {
     let id: Int
-    let postName: String
-    let postDescription: String
+    let post_name: String
+    let post_description: String
     let timestamp: String
-    var comments: [Comment]
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case postName = "post_name"
-        case postDescription = "post_description"
-        case timestamp, comments
-    }
+    let comments: [Comment]
 }
 
+struct CommentResponse: Decodable {
+    let comments: [Comment]
+}
 
-
-
-struct Comment: Identifiable, Codable {
-    let id: Int
+struct CommentPayload: Encodable {
     let description: String
     let timestamp: String
-    let postID: Int?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case description = "comment_description"  
-        case timestamp
-        case postID = "post_id"
-    }
 }
+
+
+struct Comment: Codable, Identifiable {
+    let id: Int
+    let comment_description: String
+    let timestamp: String
+    let post_id: Int?
+}
+
+
+
 
 
 

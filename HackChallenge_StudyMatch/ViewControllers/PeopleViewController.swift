@@ -4,6 +4,7 @@
 //
 //  Created by Michael Vu on 12/6/24.
 //
+
 import UIKit
 
 class PeopleViewController: UIViewController {
@@ -27,20 +28,18 @@ class PeopleViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         title = "People"
-        
-        fetchGroups()   // Fetch groups from backend
-        fetchUsers()    // Fetch users from backend
+        fetchGroups()
+        fetchUsers()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        fetchGroups()   // Refresh groups
-        fetchUsers()    // Refresh users
+        fetchGroups()
+        fetchUsers()
     }
     
     // MARK: - Setup Views
     private func setupScrollView() {
-        // Remove existing views first
         view.subviews.forEach { $0.removeFromSuperview() }
         
         let scrollView = UIScrollView()
@@ -77,7 +76,6 @@ class PeopleViewController: UIViewController {
             stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
         
-        // Add a view for each user
         for user in users {
             let personView = PersonView(user: user, groups: groups)
             stackView.addArrangedSubview(personView)
@@ -86,16 +84,13 @@ class PeopleViewController: UIViewController {
     
     // MARK: - API Integration
     
-    /// Fetches all groups from the backend
+    // Fetches all groups from the backend
     private func fetchGroups() {
         APIService.shared.fetch("/groups/", responseType: [String: [Group]].self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
+                if case let .success(response) = result {
                     self.groups = response["groups"] ?? []
-                    self.setupScrollView()  // Refresh the scroll view
-                case .failure(let error):
-                    print("Error fetching groups:", error.localizedDescription)
+                    self.setupScrollView()
                 }
             }
         }
@@ -105,16 +100,11 @@ class PeopleViewController: UIViewController {
     private func fetchUsers() {
         APIService.shared.fetch("/users/", responseType: [String: [User]].self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
+                if case let .success(response) = result {
                     self.users = response["users"] ?? []
-                    self.setupScrollView()  // Refresh the scroll view
-                case .failure(let error):
-                    print("Error fetching users:", error.localizedDescription)
+                    self.setupScrollView()
                 }
             }
         }
     }
 }
-
-

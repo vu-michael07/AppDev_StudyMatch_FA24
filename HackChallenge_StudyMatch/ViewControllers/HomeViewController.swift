@@ -5,13 +5,6 @@
 //  Created by Michael Vu on 12/5/24.
 //
 
-//
-//  HomeViewController.swift
-//  HackChallenge_StudyMatch
-//
-//  Created by Michael Vu on 12/5/24.
-//
-
 import UIKit
 
 class HomeViewController: UIViewController {
@@ -40,6 +33,11 @@ class HomeViewController: UIViewController {
         setupButtons()
         setupCommentSection()
         fetchData()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        fetchPosts()
     }
     
     // MARK: - Setup Views
@@ -111,89 +109,103 @@ class HomeViewController: UIViewController {
     // MARK: - API Integration
     
     private func fetchData() {
-        // Fetch current user
         APIService.shared.fetch("/users/", responseType: [User].self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let users):
+                if case let .success(users) = result {
                     self.users = users
                     if let currentUser = users.first(where: { $0.netid == UserSessionManager.shared.currentUser?.netid }) {
                         UserSessionManager.shared.setCurrentUser(currentUser)
                         self.currentUser = currentUser
                     }
-                case .failure(let error):
-                    print("Error fetching users:", error.localizedDescription)
                 }
             }
         }
         
-        // Fetch groups
         APIService.shared.fetch("/groups/", responseType: [Group].self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let groups):
+                if case let .success(groups) = result {
                     self.groups = groups
-                case .failure(let error):
-                    print("Error fetching groups:", error.localizedDescription)
                 }
             }
         }
         
-        // Fetch posts
-        APIService.shared.fetch("/posts/", responseType: [Post].self) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let posts):
-                    self.posts = posts
-                    self.commentSectionView.setPosts(posts)
-                case .failure(let error):
-                    print("Error fetching posts:", error.localizedDescription)
-                }
-            }
-        }
+        fetchPosts()
     }
-    
-    // MARK: - Navigation
-    
-    @objc private func viewProfile() {
-        guard let currentUser = UserSessionManager.shared.currentUser else {
-            return
-        }
-        let profileVC = SettingsView(currentUser: currentUser, groups: groups) { [weak self] updatedUser, updatedGroups in
-            self?.currentUser = updatedUser
-            self?.groups = updatedGroups
-        }
-        navigationController?.pushViewController(profileVC, animated: true)
-    }
-    
-    @objc private func viewGroups() {
-        let groupsVC = GroupsViewController()
-        navigationController?.pushViewController(groupsVC, animated: true)
-    }
-    
-    @objc private func viewPeople() {
-        let peopleVC = PeopleViewController(groups: groups)
-        navigationController?.pushViewController(peopleVC, animated: true)
-    }
-}
 
-// MARK: - CommentSectionViewDelegate
-extension HomeViewController: CommentSectionViewDelegate {
-    func createPost(name: String, description: String) {
-        let newPost = Post(id: 0, postName: name, postDescription: description, timestamp: "Now", comments: [])
-        
-        APIService.shared.create("/posts/", payload: newPost, responseType: Post.self) { result in
+    private func fetchPosts() {
+        APIService.shared.fetch("/posts/", responseType: PostResponse.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let createdPost):
+                if case let .success(response) = result {
+                    self.posts = response.posts
+                    self.commentSectionView.setPosts(self.posts)
+                }
+            }
+        }
+    }
+
+    
+        // MARK: - Navigation
+        
+        @objc private func viewProfile() {
+            guard let currentUser = UserSessionManager.shared.currentUser else {
+                return
+            }
+            let profileVC = SettingsView(currentUser: currentUser, groups: groups) { [weak self] updatedUser, updatedGroups in
+                self?.currentUser = updatedUser
+                self?.groups = updatedGroups
+            }
+            navigationController?.pushViewController(profileVC, animated: true)
+        }
+        
+        @objc private func viewGroups() {
+            let groupsVC = GroupsViewController()
+            navigationController?.pushViewController(groupsVC, animated: true)
+        }
+        
+        @objc private func viewPeople() {
+            let peopleVC = PeopleViewController(groups: groups)
+            navigationController?.pushViewController(peopleVC, animated: true)
+        }
+    }
+    
+    // MARK: - CommentSectionViewDelegate
+extension HomeViewController: CommentSectionViewDelegate {
+    func deletePost(for post: Post) {
+        APIService.shared.delete("/posts/\(post.id)/") { result in
+            DispatchQueue.main.async {
+                if case .success = result {
+                    self.posts.removeAll(where: { $0.id == post.id })
+                    self.commentSectionView.setPosts(self.posts)
+                }
+            }
+        }
+    }
+    
+    func createPost(name: String, description: String) {
+        let currentTimestamp = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short)
+        
+        let newPostPayload = PostCreationPayload(
+            post_name: name,
+            description: description,
+            timestamp: currentTimestamp
+        )
+        
+        APIService.shared.create("/posts/", payload: newPostPayload, responseType: Post.self) { result in
+            DispatchQueue.main.async {
+                if case let .success(createdPost) = result {
                     self.posts.insert(createdPost, at: 0)
                     self.commentSectionView.setPosts(self.posts)
-                case .failure(let error):
-                    print("Error creating post:", error.localizedDescription)
                 }
             }
         }
     }
+    
+    func viewComments(for post: Post) {
+        let postDetailVC = PostDetailViewController(post: post)
+        navigationController?.pushViewController(postDetailVC, animated: true)
+    }
 }
-
+    
+    
+    
 

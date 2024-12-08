@@ -27,7 +27,7 @@ class UserCell: UICollectionViewCell {
     
     // MARK: - Setup Views
     
-    /// Sets up the content view with rounded corners and a border
+    // Sets up the content
     private func setupContentView() {
         contentView.layer.cornerRadius = 12
         contentView.layer.borderWidth = 1
@@ -36,7 +36,7 @@ class UserCell: UICollectionViewCell {
         contentView.backgroundColor = .systemGray6
     }
     
-    /// Sets up the user name label
+    // Sets up the user name label
     private func setupNameLabel() {
         nameLabel.font = .systemFont(ofSize: 16, weight: .bold)
         nameLabel.textColor = .black
@@ -51,7 +51,7 @@ class UserCell: UICollectionViewCell {
         ])
     }
     
-    /// Sets up the user's NetID label
+    // Sets up the user's NetID label
     private func setupNetidLabel() {
         netidLabel.font = .systemFont(ofSize: 14, weight: .regular)
         netidLabel.textColor = .darkGray
@@ -69,7 +69,7 @@ class UserCell: UICollectionViewCell {
     
     // MARK: - Configuration
     
-    /// Configures the cell with a `User` object
+    // Configures with a User
     func configure(with user: User) {
         nameLabel.text = user.name
         netidLabel.text = "NetID: \(user.netid)"

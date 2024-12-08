@@ -44,7 +44,7 @@ class PostDetailViewController: UIViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        fetchComments()  // Ensure comments are updated when returning to this view
+        fetchComments()
     }
 
     // MARK: - Setup UI
@@ -85,6 +85,7 @@ class PostDetailViewController: UIViewController {
 
         textField.placeholder = "Write a comment..."
         textField.borderStyle = .roundedRect
+        textField.autocapitalizationType = .none
 
         postButton.setTitle("Post", for: .normal)
         postButton.backgroundColor = .systemBlue
@@ -130,12 +131,12 @@ class PostDetailViewController: UIViewController {
         contentStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
 
         let titleLabel = UILabel()
-        titleLabel.text = post.postName
+        titleLabel.text = post.post_name
         titleLabel.font = .boldSystemFont(ofSize: 20)
         titleLabel.textAlignment = .center
 
         let descriptionLabel = UILabel()
-        descriptionLabel.text = post.postDescription
+        descriptionLabel.text = post.post_description
         descriptionLabel.font = .systemFont(ofSize: 16)
         descriptionLabel.numberOfLines = 0
         descriptionLabel.textAlignment = .justified
@@ -150,6 +151,22 @@ class PostDetailViewController: UIViewController {
         contentStackView.addArrangedSubview(descriptionLabel)
         contentStackView.addArrangedSubview(timestampLabel)
     }
+    
+    private func refreshPost() {
+        let endpoint = "/posts/\(post.id)/"
+        
+        APIService.shared.fetch(endpoint, responseType: Post.self) { result in
+            DispatchQueue.main.async {
+                if case let .success(updatedPost) = result {
+                    self.post = updatedPost
+                    self.comments = updatedPost.comments
+                    self.displayComments()
+                }
+            }
+        }
+    }
+
+
 
     // MARK: - Display Comments
     private func displayComments() {
@@ -168,18 +185,30 @@ class PostDetailViewController: UIViewController {
         containerView.layer.borderColor = UIColor.lightGray.cgColor
         containerView.backgroundColor = .systemGray6
 
+        // Description Label
         let descriptionLabel = UILabel()
-        descriptionLabel.text = comment.description
+        descriptionLabel.text = comment.comment_description
         descriptionLabel.font = .systemFont(ofSize: 14)
         descriptionLabel.numberOfLines = 0
-        descriptionLabel.textColor = .darkGray
+        descriptionLabel.textColor = .black
 
+        // Timestamp Label
         let timestampLabel = UILabel()
         timestampLabel.text = comment.timestamp
         timestampLabel.font = .italicSystemFont(ofSize: 12)
         timestampLabel.textColor = .gray
 
-        let stack = UIStackView(arrangedSubviews: [descriptionLabel, timestampLabel])
+        // Delete Button
+        let deleteButton = UIButton(type: .system)
+        deleteButton.setTitle("Delete", for: .normal)
+        deleteButton.setTitleColor(.white, for: .normal)
+        deleteButton.backgroundColor = .systemRed
+        deleteButton.layer.cornerRadius = 8
+        deleteButton.tag = comment.id
+        deleteButton.addTarget(self, action: #selector(deleteCommentTapped(_:)), for: .touchUpInside)
+
+        // Stack View for Layout
+        let stack = UIStackView(arrangedSubviews: [descriptionLabel, timestampLabel, deleteButton])
         stack.axis = .vertical
         stack.spacing = 8
         stack.isLayoutMarginsRelativeArrangement = true
@@ -198,16 +227,17 @@ class PostDetailViewController: UIViewController {
         return containerView
     }
 
+
     // MARK: - API Calls
     private func fetchComments() {
-        APIService.shared.fetch("/posts/\(post.id)/comments/", responseType: [Comment].self) { result in
+        let endpoint = "/posts/\(post.id)/"
+
+        APIService.shared.fetch(endpoint, responseType: CommentResponse.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let fetchedComments):
-                    self.comments = fetchedComments
+                if case let .success(response) = result {
+                    self.comments = response.comments
                     self.displayComments()
-                case .failure(let error):
-                    print("Error fetching comments:", error.localizedDescription)
+                } else {
                     self.showAlert(title: "Error", message: "Failed to fetch comments.")
                 }
             }
@@ -215,32 +245,46 @@ class PostDetailViewController: UIViewController {
     }
 
     @objc private func addComment() {
-        guard let text = textField.text, !text.isEmpty else {
+        guard let text = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
             showAlert(title: "Error", message: "Comment cannot be empty.")
             return
         }
-
-        let newComment = Comment(
-            id: 0,
+        
+        let payload = CommentPayload(
             description: text,
-            timestamp: DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short),
-            postID: post.id
+            timestamp: DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .short)
         )
-
-        APIService.shared.create("/posts/\(post.id)/comments/", payload: newComment, responseType: Comment.self) { result in
+        
+        APIService.shared.create("/posts/\(post.id)/comments/", payload: payload, responseType: Post.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let createdComment):
-                    self.comments.append(createdComment)
+                if case let .success(updatedPost) = result {
+                    self.post = updatedPost
+                    self.comments = updatedPost.comments
                     self.textField.text = ""
                     self.displayComments()
-                case .failure(let error):
-                    print("Error posting comment:", error.localizedDescription)
+                } else {
                     self.showAlert(title: "Error", message: "Failed to post comment.")
                 }
             }
         }
     }
+    
+    @objc private func deleteCommentTapped(_ sender: UIButton) {
+        let commentID = sender.tag
+        let deleteEndpoint = "/comments/\(commentID)/"
+
+        APIService.shared.delete(deleteEndpoint) { result in
+            DispatchQueue.main.async {
+                if case .success = result {
+                    self.comments.removeAll { $0.id == commentID }
+                    self.displayComments()
+                } else {
+                    self.showAlert(title: "Error", message: "Failed to delete the comment.")
+                }
+            }
+        }
+    }
+
 
     // MARK: - Utility
     private func showAlert(title: String, message: String) {

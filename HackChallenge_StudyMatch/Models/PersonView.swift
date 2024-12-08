@@ -23,7 +23,7 @@ class PersonView: UIView {
     
     // MARK: - Setup
     
-    /// Sets up the view's appearance and layout
+    // Sets up the view's appearance and layout
     private func setupView(user: User, groups: [Group]) {
         layer.cornerRadius = 12
         layer.borderWidth = 1

@@ -64,13 +64,10 @@ class UserDetailViewController: UIViewController {
         
         APIService.shared.fetch("/users/\(user.id)/", responseType: User.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let fetchedUser):
+                if case let .success(fetchedUser) = result {
                     self.user = fetchedUser
                     self.populateData()
                     self.fetchGroupDetails()
-                case .failure(let error):
-                    print("Error fetching user details:", error.localizedDescription)
                 }
             }
         }
@@ -84,18 +81,15 @@ class UserDetailViewController: UIViewController {
         
         APIService.shared.fetch("/groups/\(groupId)/", responseType: Group.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let fetchedGroup):
+                if case let .success(fetchedGroup) = result {
                     self.group = fetchedGroup
                     self.groupLabel.text = "Group: \(fetchedGroup.name)"
-                case .failure(let error):
-                    print("Error fetching group details:", error.localizedDescription)
+                } else {
                     self.groupLabel.text = "Group ID: \(groupId)"
                 }
             }
         }
     }
-
     
     // MARK: - Populate Data
     

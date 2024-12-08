@@ -28,12 +28,12 @@ class GroupsViewController: UIViewController {
         title = "Groups"
         
         setupCreateGroupSection()
-        fetchGroups()  // Fetch initial groups from backend
+        fetchGroups()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        fetchGroups()  // Refresh groups when the view appears
+        fetchGroups()
     }
     
     // MARK: - Setup Views
@@ -75,16 +75,36 @@ class GroupsViewController: UIViewController {
             stackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
         
-        // Populate Group Views
         for group in groups {
-            let groupView = GroupView(group: group)
-            groupView.isUserInteractionEnabled = true
+            let groupView = GroupView(
+                group: group,
+                onDelete: { [weak self] in
+                    self?.deleteGroup(group)
+                },
+                onTap: { [weak self] in
+                    self?.navigateToGroupDetail(group)
+                }
+            )
             groupView.tag = group.id
-            
-            let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleGroupTap(_:)))
-            groupView.addGestureRecognizer(tapGesture)
-            
             stackView.addArrangedSubview(groupView)
+        }
+    }
+    
+    private func navigateToGroupDetail(_ group: Group) {
+        let groupDetailVC = GroupDetailViewController(group: group)
+        navigationController?.pushViewController(groupDetailVC, animated: true)
+    }
+    
+    private func deleteGroup(_ group: Group) {
+        let endpoint = "/groups/\(group.id)/"
+        
+        APIService.shared.delete(endpoint) { result in
+            DispatchQueue.main.async {
+                if case .success = result {
+                    self.groups.removeAll { $0.id == group.id }
+                    self.setupScrollView()
+                }
+            }
         }
     }
     
@@ -95,13 +115,12 @@ class GroupsViewController: UIViewController {
         createGroupStackView.alignment = .center
         createGroupStackView.distribution = .fillProportionally
         
-        // TextField for Group Name
         let textField = UITextField()
         textField.placeholder = "Enter Group Name"
         textField.borderStyle = .roundedRect
+        textField.autocapitalizationType = .none
         textField.translatesAutoresizingMaskIntoConstraints = false
         
-        // Create Group Button
         let createGroupButton = UIButton(type: .system)
         createGroupButton.setTitle("Create Group", for: .normal)
         createGroupButton.backgroundColor = .systemBlue
@@ -133,17 +152,13 @@ class GroupsViewController: UIViewController {
             return
         }
         
-        // Create Group API Call
         let newGroup = Group(id: 0, name: groupName, users: [], tasks: [])
         APIService.shared.create("/groups/", payload: newGroup as Encodable, responseType: Group.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let createdGroup):
+                if case let .success(createdGroup) = result {
                     self.groups.append(createdGroup)
-                    textField.text = ""  // Clear input
-                    self.setupScrollView()  // Refresh UI
-                case .failure(let error):
-                    print("Error creating group:", error.localizedDescription)
+                    textField.text = ""
+                    self.setupScrollView()
                 }
             }
         }
@@ -163,17 +178,11 @@ class GroupsViewController: UIViewController {
     private func fetchGroups() {
         APIService.shared.fetch("/groups/", responseType: GroupResponse.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
+                if case let .success(response) = result {
                     self.groups = response.groups
-                    self.setupScrollView()  // Refresh UI
-                case .failure(let error):
-                    print("Error fetching groups:", error.localizedDescription)
+                    self.setupScrollView()
                 }
             }
         }
     }
-
-
-    
 }

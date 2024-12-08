@@ -105,12 +105,9 @@ class TaskView: UIView {
             responseType: Task.self
         ) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    print("Task deleted successfully.")
+                if case .success = result {
                     self.onTaskDeleted(self.task)
-                case .failure(let error):
-                    print("Error deleting task:", error.errorDescription ?? "Unknown error")
+                } else {
                     self.showAlert(title: "Error", message: "Failed to delete task.")
                 }
             }
@@ -146,10 +143,9 @@ class TaskView: UIView {
                 return
             }
             
-            // Corrected Payload Keys Based on Backend Expectations
             let updatedTaskPayload: [String: Any] = [
                 "task_name": taskName,
-                "description": taskDescription,  // Corrected Key
+                "description": taskDescription,
                 "due_date": dueDate
             ]
             
@@ -158,20 +154,16 @@ class TaskView: UIView {
                 return
             }
             
-            // Perform the PUT Request
             APIService.shared.sendRequest(
                 endpoint: "/tasks/\(self.task.id)/",
                 method: "PUT",
                 body: jsonData,
-                responseType: Group.self  // Assuming the backend returns a full Group response
+                responseType: Group.self
             ) { result in
                 DispatchQueue.main.async {
-                    switch result {
-                    case .success(let updatedGroup):
-                        print("Task updated successfully.")
+                    if case .success = result {
                         self.onTaskEdited(self.task)
-                    case .failure(let error):
-                        print("Error updating task:", error.errorDescription ?? "Unknown error")
+                    } else {
                         self.showAlert(title: "Error", message: "Failed to update task.")
                     }
                 }
@@ -182,11 +174,9 @@ class TaskView: UIView {
         alertController.addAction(saveAction)
         alertController.addAction(cancelAction)
         
-        // Present Alert Safely
         UIApplication.shared.windows.first?.rootViewController?.present(alertController, animated: true)
     }
 
-    
     // MARK: - Utility
     
     private func showAlert(title: String, message: String) {

@@ -166,14 +166,11 @@ class GroupDetailViewController: UIViewController {
     private func refreshGroupData() {
         APIService.shared.fetch("/groups/\(group.id)/", responseType: Group.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let updatedGroup):
+                if case let .success(updatedGroup) = result {
                     self.group = updatedGroup
                     self.setupPeopleSection()
                     self.refreshTasks()
                     self.updateJoinGroupButtonState()
-                case .failure(let error):
-                    print("Error refreshing group data:", error.localizedDescription)
                 }
             }
         }
@@ -208,22 +205,18 @@ class GroupDetailViewController: UIViewController {
             showAlert(title: "Error", message: "All fields are required.")
             return
         }
-        
-        // Corrected Payload Keys to Match Backend
+
         let taskPayload: [String: Any] = [
             "task_name": taskName,
-            "description": taskDescription,  // Corrected to "description"
+            "description": taskDescription,
             "due_date": dueDate
         ]
-        
-        // Print Payload for Debugging
-        print("Request Payload:", taskPayload)
-        
+
         guard let jsonData = try? JSONSerialization.data(withJSONObject: taskPayload, options: []) else {
             showAlert(title: "Error", message: "Failed to encode task payload.")
             return
         }
-        
+
         APIService.shared.sendRequest(
             endpoint: "/groups/\(group.id)/tasks/",
             method: "POST",
@@ -231,19 +224,14 @@ class GroupDetailViewController: UIViewController {
             responseType: Group.self
         ) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let updatedGroup):
+                if case let .success(updatedGroup) = result {
                     self.group = updatedGroup
                     self.refreshTasks()
                     nameField.text = ""
                     descriptionField.text = ""
                     dueDateField.text = ""
-                case .failure(let error):
-                    print("Error creating task:", error.errorDescription ?? "Unknown error")
-                    self.showAlert(
-                        title: "Error",
-                        message: "Failed to create task. Reason: \(error.errorDescription ?? "Unknown")"
-                    )
+                } else {
+                    self.showAlert(title: "Error", message: "Failed to create task.")
                 }
             }
         }
@@ -251,40 +239,41 @@ class GroupDetailViewController: UIViewController {
 
     
     // MARK: - Join Group Logic
-     private func setupJoinGroupButton() {
-         joinGroupButton.layer.cornerRadius = 8
-         joinGroupButton.addTarget(self, action: #selector(joinGroup), for: .touchUpInside)
-         updateJoinGroupButtonState()
-     }
-     
-     private func updateJoinGroupButtonState() {
-         guard let currentUser = UserSessionManager.shared.currentUser else { return }
-         
-         if let userGroupId = currentUser.group_id {
-             configureJoinButton(title: "In Different Group", color: .black)
-         } else {
-             configureJoinButton(title: "Join Group", color: .systemBlue)
-         }
-     }
+    private func setupJoinGroupButton() {
+        joinGroupButton.layer.cornerRadius = 8
+        joinGroupButton.addTarget(self, action: #selector(joinGroup), for: .touchUpInside)
+        updateJoinGroupButtonState()
+    }
 
-     private func configureJoinButton(title: String, color: UIColor) {
-         joinGroupButton.setTitle(title, for: .normal)
-         joinGroupButton.setTitleColor(.white, for: .normal)
-         joinGroupButton.backgroundColor = color
-     }
-     
+    private func updateJoinGroupButtonState() {
+        guard let currentUser = UserSessionManager.shared.currentUser else { return }
+
+        if let userGroupId = currentUser.group_id {
+            if userGroupId == group.id {
+                configureJoinButton(title: "Already Joined", color: .systemGray, isEnabled: false)
+            } else {
+                configureJoinButton(title: "In Different Group", color: .systemRed, isEnabled: false)
+            }
+        } else {
+            configureJoinButton(title: "Join Group", color: .systemBlue, isEnabled: true)
+        }
+    }
+
+    private func configureJoinButton(title: String, color: UIColor, isEnabled: Bool) {
+        joinGroupButton.setTitle(title, for: .normal)
+        joinGroupButton.setTitleColor(.white, for: .normal)
+        joinGroupButton.backgroundColor = color
+        joinGroupButton.isEnabled = isEnabled
+    }
+
     @objc private func joinGroup() {
-        guard let currentUser = UserSessionManager.shared.currentUser else {
-            showAlert(title: "Error", message: "No current user found.")
+        guard let currentUser = UserSessionManager.shared.currentUser, joinGroupButton.isEnabled else {
+            showAlert(title: "Error", message: "Action not allowed.")
             return
         }
-        
+
         let endpoint = "/users/\(currentUser.id)/"
         let payload: [String: Any] = ["group_id": group.id]
-
-        // Print Debug Information
-        print("Request Endpoint:", endpoint)
-        print("Request Payload:", payload)
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: payload) else {
             showAlert(title: "Error", message: "Failed to encode request payload.")
@@ -298,26 +287,16 @@ class GroupDetailViewController: UIViewController {
             responseType: Group.self
         ) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let updatedGroup):
-                    print("Successfully joined group:", updatedGroup)
+                if case let .success(updatedGroup) = result {
                     self.group = updatedGroup
                     self.refreshGroupData()
                     self.updateJoinGroupButtonState()
-
-                case .failure(let error):
-                    print("Error updating group membership:", error.errorDescription ?? "Unknown error")
-                    self.showAlert(
-                        title: "Error",
-                        message: "Failed to update group. Reason: \(error.errorDescription ?? "Unknown")"
-                    )
+                } else {
+                    self.showAlert(title: "Error", message: "Failed to join the group.")
                 }
             }
         }
     }
-
-
-
      
      // MARK: - Utility
      private func showAlert(title: String, message: String) {

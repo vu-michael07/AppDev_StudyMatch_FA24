@@ -10,19 +10,18 @@ import UIKit
 class SettingsView: UIViewController {
     
     // MARK: - Properties (Data)
-    private var currentUser: User? // Represents the currently logged-in user
-    private var groups: [Group] = [] // All available groups
-    private let onUpdate: (User, [Group]) -> Void // Callback to update data
+    private var currentUser: User?
+    private var groups: [Group] = []
+    private let onUpdate: (User, [Group]) -> Void
     
     // MARK: - Properties (Views)
-    private let userNameLabel = UILabel() // Displays the user's name
-    private let netIDLabel = UILabel() // Displays the user's NetID
-    private let groupsLabel = UILabel() // Displays the user's groups
+    private let userNameLabel = UILabel()
+    private let netIDLabel = UILabel()
     
-    private let netIDTextField = UITextField() // TextField for NetID input
-    private let findUserButton = UIButton(type: .system) // Button to find or create a user
-    private var nameTextField: UITextField? // TextField for creating a new user
-    private var createUserButton: UIButton? // Button to create the user
+    private let netIDTextField = UITextField()
+    private let findUserButton = UIButton(type: .system)
+    private var nameTextField: UITextField?
+    private var createUserButton: UIButton?
     private let deleteUserButton = UIButton(type: .system)
     
     // MARK: - Init
@@ -49,8 +48,8 @@ class SettingsView: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        fetchUserDetails() // Sync backend state
-        displayUserInfo()  // Refresh UI
+        fetchUserDetails()
+        displayUserInfo()
     }
     
     // MARK: - Setup Views
@@ -64,22 +63,21 @@ class SettingsView: UIViewController {
             stackView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             stackView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16)
         ])
-          
-        // Delete User Button Setup
+        
         styleButton(deleteUserButton, title: "Delete User")
         deleteUserButton.backgroundColor = .red
         deleteUserButton.addTarget(self, action: #selector(deleteUser), for: .touchUpInside)
-         
-         view.addSubview(deleteUserButton)
-         deleteUserButton.translatesAutoresizingMaskIntoConstraints = false
-         
-         NSLayoutConstraint.activate([
-             deleteUserButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-             deleteUserButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-             deleteUserButton.widthAnchor.constraint(equalToConstant: 180),
-             deleteUserButton.heightAnchor.constraint(equalToConstant: 50)
-         ])
-     }
+        
+        view.addSubview(deleteUserButton)
+        deleteUserButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            deleteUserButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            deleteUserButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            deleteUserButton.widthAnchor.constraint(equalToConstant: 180),
+            deleteUserButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
+    }
     
     private func createProfileStackView() -> UIStackView {
         let stackView = UIStackView()
@@ -87,13 +85,12 @@ class SettingsView: UIViewController {
         stackView.spacing = 16
         stackView.alignment = .leading
         
-        // Left & Right columns for profile data
         let labelsStack = createProfileLabelsStackView()
         stackView.addArrangedSubview(labelsStack)
         
-        // NetID entry section
         netIDTextField.placeholder = "Enter your NetID"
         netIDTextField.borderStyle = .roundedRect
+        netIDTextField.autocapitalizationType = .none
         
         styleButton(findUserButton, title: "Find or Create")
         findUserButton.addTarget(self, action: #selector(findOrCreateUser), for: .touchUpInside)
@@ -120,7 +117,7 @@ class SettingsView: UIViewController {
         rightColumn.axis = .vertical
         rightColumn.spacing = 8
         
-        ["Username:", "NetID:", "Groups:"].forEach { label in
+        ["Username:", "NetID:"].forEach { label in
             let lbl = UILabel()
             lbl.text = label
             lbl.font = .systemFont(ofSize: 16, weight: .bold)
@@ -129,7 +126,6 @@ class SettingsView: UIViewController {
         
         rightColumn.addArrangedSubview(userNameLabel)
         rightColumn.addArrangedSubview(netIDLabel)
-        rightColumn.addArrangedSubview(groupsLabel)
         
         labelsStack.addArrangedSubview(leftColumn)
         labelsStack.addArrangedSubview(rightColumn)
@@ -142,6 +138,7 @@ class SettingsView: UIViewController {
         let nameTextField = UITextField()
         nameTextField.placeholder = "Enter your name"
         nameTextField.borderStyle = .roundedRect
+        nameTextField.autocapitalizationType = .none
         self.nameTextField = nameTextField
         
         let createUserButton = UIButton(type: .system)
@@ -167,52 +164,37 @@ class SettingsView: UIViewController {
     private func fetchGroups() {
         APIService.shared.fetch("/groups/", responseType: [Group].self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let fetchedGroups):
+                if case let .success(fetchedGroups) = result {
                     self.groups = fetchedGroups
-                    self.displayUserInfo() // Refresh the display
-                case .failure(let error):
-                    print("Error fetching groups:", error.localizedDescription)
+                    self.displayUserInfo()
                 }
             }
         }
     }
 
     private func fetchUserDetails() {
-        guard let currentUserID = UserSessionManager.shared.currentUser?.id else {
-            print("No current user ID available.")
-            return
-        }
+        guard let currentUserID = UserSessionManager.shared.currentUser?.id else { return }
         
         APIService.shared.fetch("/users/\(currentUserID)", responseType: User.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let fetchedUser):
+                if case let .success(fetchedUser) = result {
                     self.currentUser = fetchedUser
-                    UserSessionManager.shared.setCurrentUser(fetchedUser) // Track updated user
+                    UserSessionManager.shared.setCurrentUser(fetchedUser)
                     self.displayUserInfo()
-                case .failure(let error):
-                    print("Error fetching user details:", error.localizedDescription)
                 }
             }
         }
     }
-
     
     // MARK: - Display User Info
     private func displayUserInfo() {
         guard let user = currentUser else {
             userNameLabel.text = "N/A"
             netIDLabel.text = "N/A"
-            groupsLabel.text = "N/A"
             return
         }
-        
         userNameLabel.text = user.name
         netIDLabel.text = user.netid
-        
-        let userGroups = groups.filter { $0.users.contains(where: { $0.id == user.id }) }
-        groupsLabel.text = userGroups.isEmpty ? "None" : userGroups.map { $0.name }.joined(separator: ", ")
     }
     
     // MARK: - Actions
@@ -222,78 +204,52 @@ class SettingsView: UIViewController {
             return
         }
         
-        // Correct API fetch using UserResponse
         APIService.shared.fetch("/users/", responseType: UserResponse.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    if let foundUser = response.users.first(where: { $0.netid == netID }) {
-                        self.currentUser = foundUser
-                        UserSessionManager.shared.setCurrentUser(foundUser) // Save the user session
-                        self.onUpdate(foundUser, self.groups)
-                        self.displayUserInfo()
-                    } else {
-                        self.setupNameInputField() // Show user creation UI
-                    }
-                case .failure(let error):
-                    print("Error fetching users:", error.localizedDescription)
+                if case let .success(response) = result,
+                   let foundUser = response.users.first(where: { $0.netid == netID }) {
+                    
+                    self.currentUser = foundUser
+                    UserSessionManager.shared.setCurrentUser(foundUser)
+                    self.onUpdate(foundUser, self.groups)
+                    self.displayUserInfo()
+                } else {
+                    self.setupNameInputField()
                 }
             }
         }
     }
 
     @objc private func deleteUser() {
-        guard let currentUserID = currentUser?.id else {
-            showAlert(title: "Error", message: "No user to delete.")
-            return
-        }
+        guard let currentUserID = currentUser?.id else { return }
         
         APIService.shared.delete("/users/\(currentUserID)/") { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    print("User deleted successfully.")
+                if case .success = result {
                     self.currentUser = nil
                     UserSessionManager.shared.clearCurrentUser()
                     self.displayUserInfo()
-                case .failure(let error):
-                    print("Error deleting user:", error.localizedDescription)
-                    self.showAlert(title: "Error", message: "Failed to delete user.")
                 }
             }
         }
     }
 
     @objc private func createUser() {
-        guard let name = nameTextField?.text, !name.isEmpty,
-              let netID = netIDTextField.text, !netID.isEmpty else {
-            showAlert(title: "Error", message: "Both name and NetID are required.")
-            return
-        }
+        guard let name = nameTextField?.text, !name.isEmpty, let netID = netIDTextField.text, !netID.isEmpty else { return }
         
-        let newUser = User(id: 0, name: name, netid: netID, group_id: nil)
-        
-        APIService.shared.create("/users/", payload: newUser as Encodable, responseType: User.self) { result in
+        let newUser = User(id: 0, name: name, netid: netID)
+        APIService.shared.create("/users/", payload: newUser, responseType: User.self) { result in
             DispatchQueue.main.async {
-                switch result {
-                case .success(let createdUser):
+                if case let .success(createdUser) = result {
                     self.currentUser = createdUser
-                    UserSessionManager.shared.setCurrentUser(createdUser) // Track the user
+                    UserSessionManager.shared.setCurrentUser(createdUser)
                     self.onUpdate(createdUser, self.groups)
                     self.displayUserInfo()
-                    
-                    self.nameTextField?.removeFromSuperview()
-                    self.createUserButton?.removeFromSuperview()
-                    self.nameTextField = nil
-                    self.createUserButton = nil
-                case .failure(let error):
-                    print("Error creating user:", error.localizedDescription)
                 }
             }
         }
     }
 
-    
     // MARK: - Utility
     private func styleButton(_ button: UIButton, title: String) {
         button.setTitle(title, for: .normal)
@@ -301,11 +257,10 @@ class SettingsView: UIViewController {
         button.backgroundColor = .systemBlue
         button.layer.cornerRadius = 8
     }
-    
+
     private func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
 }
-
